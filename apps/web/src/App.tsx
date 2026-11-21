@@ -1,16 +1,57 @@
+import { AppProvider, useApp } from './context/AppContext.js';
+import { AppLayout } from './components/layout/AppLayout.js';
+import { EmergencyPauseBanner } from './components/common/EmergencyPauseBanner.js';
+import { DashboardView } from './views/DashboardView.js';
+import { ResearchInboxView } from './views/ResearchInboxView.js';
+import { ContentStudioView } from './views/ContentStudioView.js';
+import { ReviewQueueView } from './views/ReviewQueueView.js';
+import { EditorialCalendarView } from './views/EditorialCalendarView.js';
+import { BufferChannelsView } from './views/BufferChannelsView.js';
+import { AnalyticsView } from './views/AnalyticsView.js';
+import { SettingsView } from './views/SettingsView.js';
+import { AuditLogView } from './views/AuditLogView.js';
+
+function AppContent() {
+  const { activeView } = useApp();
+
+  const renderView = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return <DashboardView />;
+      case 'research':
+        return <ResearchInboxView />;
+      case 'studio':
+        return <ContentStudioView />;
+      case 'queue':
+        return <ReviewQueueView />;
+      case 'calendar':
+        return <EditorialCalendarView />;
+      case 'buffer':
+        return <BufferChannelsView />;
+      case 'analytics':
+        return <AnalyticsView />;
+      case 'settings':
+        return <SettingsView />;
+      case 'audit':
+        return <AuditLogView />;
+      default:
+        return <DashboardView />;
+    }
+  };
+
+  return (
+    <AppLayout>
+      <EmergencyPauseBanner />
+      {renderView()}
+    </AppLayout>
+  );
+}
+
 export function App() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
-      <h1 className="text-4xl font-extrabold tracking-tight text-sky-400">
-        XGrowth AI
-      </h1>
-      <p className="mt-4 max-w-md text-slate-400">
-        Buffer-first content operations and growth platform for software engineers.
-      </p>
-      <div className="mt-6 rounded-lg bg-slate-800 px-4 py-2 text-sm text-emerald-400 border border-slate-700">
-        Status: Initialized &amp; System Healthy
-      </div>
-    </div>
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
   );
 }
 
