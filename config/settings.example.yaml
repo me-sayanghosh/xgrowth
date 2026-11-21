@@ -1,0 +1,64 @@
+app:
+  name: "XGrowth AI"
+  environment: "development"
+  timezone: "Asia/Kolkata"
+  default_language: "en"
+  supported_languages: ["en", "bn", "mixed"]
+
+operation:
+  mode: "review_everything" # review_everything | approved_category_auto_submit
+  global_pause: true
+  max_posts_per_day: 3
+  max_buffer_submissions_per_run: 3
+  require_source_for_current_claims: true
+
+publishing:
+  provider: "buffer"
+  target_channel_label: "My X account"
+  default_timezone: "Asia/Kolkata"
+  preferred_windows:
+    - "09:00"
+    - "13:00"
+    - "19:00"
+  submit_only_approved: true
+  retry_ambiguous_submissions: false
+
+brand:
+  audience:
+    - "software developers"
+    - "full-stack developers"
+    - "AI-curious builders"
+  pillars:
+    - "Software engineering"
+    - "Backend and full-stack development"
+    - "React, Node.js, JavaScript and TypeScript"
+    - "AI tools and practical AI engineering"
+    - "Building in public"
+    - "Startups and product engineering"
+  voice:
+    traits: ["clear", "practical", "curious", "specific", "human"]
+    avoid: ["generic motivational posts", "fake controversy", "engagement bait", "hashtag stuffing"]
+  formats:
+    - "single_post"
+    - "educational_tip"
+    - "build_in_public"
+    - "opinion_with_reasoning"
+    - "thread_draft"
+
+research:
+  daily_candidate_target: 10
+  source_allowlist: []
+  require_source_url: true
+  max_age_hours_for_trend: 72
+  deduplicate_topics: true
+
+ai:
+  provider: "gemini"
+  model: "" # set to a currently supported model
+  max_variants_per_brief: 3
+  temperature: 0.7
+
+analytics:
+  weekly_report_day: "Monday"
+  weekly_report_time: "10:00"
+  show_unavailable_as: "Not available from connected provider"

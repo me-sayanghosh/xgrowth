@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "XGrowth AI Content Item",
+  "type": "object",
+  "required": [
+    "id",
+    "status",
+    "format",
+    "text",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "idea",
+        "researched",
+        "draft",
+        "needs_review",
+        "approved",
+        "submitted_to_buffer",
+        "queued",
+        "published",
+        "rejected",
+        "archived",
+        "failed",
+        "unknown",
+        "needs_source_review",
+        "paused"
+      ]
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "single_post",
+        "educational_tip",
+        "build_in_public",
+        "opinion_with_reasoning",
+        "thread_draft"
+      ]
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "threadParts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topicPillar": {
+      "type": "string"
+    },
+    "audience": {
+      "type": "string"
+    },
+    "sourceUrls": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "researchNotes": {
+      "type": "string"
+    },
+    "qualityFlags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "riskFlags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "contentHash": {
+      "type": "string"
+    },
+    "approval": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "approvedBy": {
+          "type": "string"
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "approvedHash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approvedBy",
+        "approvedAt",
+        "approvedHash"
+      ]
+    },
+    "buffer": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "submissionId": {
+          "type": "string"
+        },
+        "providerStatus": {
+          "type": "string"
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastCheckedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "errorCode": {
+          "type": "string"
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}
