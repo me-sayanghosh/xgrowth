@@ -1,5 +1,3 @@
-import React from 'react';
-
 export function App() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
