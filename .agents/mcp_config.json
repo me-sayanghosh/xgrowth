@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "xgrowth": {
+      "command": "node",
+      "args": ["packages/mcp/dist/index.js"],
+      "env": {
+        "XGROWTH_API_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
