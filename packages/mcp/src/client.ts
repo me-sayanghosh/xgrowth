@@ -1,0 +1,180 @@
+export interface XGrowthStatus {
+  globalPause: boolean;
+  operationMode: string;
+  brandPillars: string[];
+  voiceTraits: string[];
+  pendingReviewCount?: number;
+  approvedCount?: number;
+  submittedCount?: number;
+}
+
+export interface ResearchTopic {
+  id: string;
+  title: string;
+  sourceName: string;
+  sourceUrl: string;
+  summary: string;
+  topicPillar: string;
+  freshnessScore: number;
+  status: string;
+}
+
+export interface GeneratedDraftItem {
+  id: string;
+  status: string;
+  format: string;
+  text: string;
+  topicPillar: string;
+  qualityFlags: string[];
+  riskFlags: string[];
+}
+
+export interface ContentItemDetails {
+  id: string;
+  status: string;
+  format: string;
+  text: string;
+  topicPillar: string;
+  contentHash?: string;
+  approval?: {
+    approvedBy: string;
+    approvedAt: string;
+    approvedHash: string;
+  };
+  buffer?: {
+    channelId?: string;
+    submissionId?: string;
+    providerStatus?: string;
+  };
+  createdAt: string;
+}
+
+export interface WeeklyReportSummary {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  markdownReport: string;
+  whatWorked: string[];
+  whatNeedsTesting: string[];
+  nextExperiments: string[];
+}
+
+export class XGrowthApiClient {
+  private baseUrl: string;
+  private apiKey?: string;
+
+  constructor(options?: { baseUrl?: string; apiKey?: string }) {
+    this.baseUrl = (options?.baseUrl || process.env.XGROWTH_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+    this.apiKey = options?.apiKey || process.env.XGROWTH_API_KEY;
+  }
+
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-xgrowth-csrf': '1',
+      ...(options?.headers as Record<string, string>),
+    };
+
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
+
+    const res = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!res.ok) {
+      const errorBody = (await res.json().catch(() => ({}))) as { message?: string };
+      throw new Error(errorBody.message || `XGrowth API request failed with status ${res.status}`);
+    }
+
+    return res.json() as Promise<T>;
+  }
+
+  public async getStatus(): Promise<XGrowthStatus> {
+    const settings = await this.request<{
+      globalPause: boolean;
+      operationMode: string;
+      brandPillars: string[];
+      voiceTraits: string[];
+    }>('/api/settings');
+
+    const items = await this.request<ContentItemDetails[]>('/api/content/items').catch(() => []);
+
+    return {
+      globalPause: settings.globalPause,
+      operationMode: settings.operationMode,
+      brandPillars: settings.brandPillars,
+      voiceTraits: settings.voiceTraits,
+      pendingReviewCount: items.filter((i) => i.status === 'needs_review').length,
+      approvedCount: items.filter((i) => i.status === 'approved').length,
+      submittedCount: items.filter((i) => i.status === 'submitted_to_buffer' || i.status === 'queued').length,
+    };
+  }
+
+  public async toggleEmergencyPause(paused: boolean): Promise<{ success: boolean; globalPause: boolean }> {
+    return this.request<{ success: boolean; globalPause: boolean }>('/api/settings/emergency-pause', {
+      method: 'POST',
+      body: JSON.stringify({ paused }),
+    });
+  }
+
+  public async getTopics(): Promise<ResearchTopic[]> {
+    return this.request<ResearchTopic[]>('/api/research/candidates');
+  }
+
+  public async generateDrafts(params: {
+    topic: string;
+    verifiedFacts: string[];
+    format?: string;
+    topicPillar?: string;
+    variantCount?: number;
+  }): Promise<{ success: boolean; items: GeneratedDraftItem[] }> {
+    return this.request<{ success: boolean; items: GeneratedDraftItem[] }>('/api/content/generate', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  public async listDrafts(status?: string): Promise<ContentItemDetails[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request<ContentItemDetails[]>(`/api/content/items${query}`);
+  }
+
+  public async approveDraft(id: string, channelId: string): Promise<{ success: boolean; item: ContentItemDetails }> {
+    return this.request<{ success: boolean; item: ContentItemDetails }>(`/api/content/items/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ channelId }),
+    });
+  }
+
+  public async submitToBuffer(params: {
+    contentItemId: string;
+    channelId: string;
+    schedulingType?: 'addToQueue' | 'scheduled' | 'publishNow';
+    dueAt?: string;
+  }): Promise<{ success: boolean; status: string; submissionId?: string; message: string }> {
+    return this.request<{ success: boolean; status: string; submissionId?: string; message: string }>(
+      '/api/buffer/submit',
+      {
+        method: 'POST',
+        body: JSON.stringify(params),
+      },
+    );
+  }
+
+  public async reconcileStatus(id: string): Promise<{ success: boolean; item: ContentItemDetails }> {
+    return this.request<{ success: boolean; item: ContentItemDetails }>(`/api/buffer/reconcile/${id}`, {
+      method: 'POST',
+    });
+  }
+
+  public async getWeeklyReport(): Promise<WeeklyReportSummary> {
+    const reports = await this.request<WeeklyReportSummary[]>('/api/analytics/reports');
+    if (reports.length > 0 && reports[0]) {
+      return reports[0];
+    }
+    throw new Error('No weekly analytics reports available');
+  }
+}
