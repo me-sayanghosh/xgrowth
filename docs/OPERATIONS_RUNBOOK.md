@@ -142,12 +142,47 @@ When an outbound Buffer submission experiences a socket timeout or 504 Gateway e
 
 ---
 
-## 8. Final Acceptance Checklist & Verification Sign-Off
+## 8. Google Antigravity MCP Integration & Control
+
+XGrowth AI provides a native Model Context Protocol (MCP) server in `@xgrowth/mcp`, enabling Google Antigravity agents to directly inspect, operate, and automate content workflows.
+
+### Registering the MCP Server in Antigravity
+The workspace configuration is defined in `.agents/mcp_config.json`:
+```json
+{
+  "mcpServers": {
+    "xgrowth": {
+      "command": "node",
+      "args": ["packages/mcp/dist/index.js"],
+      "env": {
+        "XGROWTH_API_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+### Available Antigravity Tools
+| Tool Name | Capability | Safety Check |
+|:---|:---|:---:|
+| `xgrowth_get_status` | Returns system pause state, brand pillars, review queue count | Read-only |
+| `xgrowth_toggle_emergency_pause` | Activates/deactivates the global emergency pause | Audit logged |
+| `xgrowth_research_topics` | Fetches trending engineering topics from RSS sources | Read-only |
+| `xgrowth_generate_draft` | Generates 2-3 technical post variants via Gemini | Quality linted |
+| `xgrowth_list_drafts` | Lists drafts filtered by status | Read-only |
+| `xgrowth_approve_draft` | Calculates SHA-256 hash and records owner approval | Cryptographic invariant |
+| `xgrowth_submit_to_buffer` | Dispatches approved post through the 4-gate safety filter | 4-Gate Safety |
+| `xgrowth_reconcile_status` | Reconciles quarantined posts in 'unknown' state | No duplicate retry |
+| `xgrowth_get_weekly_report` | Retrieves the weekly Markdown analytics report | Zero metric hallucination |
+
+---
+
+## 9. Final Acceptance Checklist & Verification Sign-Off
 
 | Requirement | Verified By | Status |
 |:---|:---|:---:|
 | Monorepo & TypeScript Strict Mode | `npm run typecheck` (`tsc --build`) | ✅ PASS |
-| Complete Multi-Project Test Suite | `npm test` (all 23 test suites) | ✅ PASS |
+| Complete Multi-Project Test Suite | `npm test` (all 26 test suites) | ✅ PASS |
 | Single-Owner Session & CSRF Defense | `apps/api/test/security/security-audit.test.ts` | ✅ PASS |
 | SafeFetcher Anti-SSRF Protection | `SafeFetcher.isSafeUrl()` & unit tests | ✅ PASS |
 | Tone & Anti-Hype Linter | `ToneLinter.lintDraft()` & unit tests | ✅ PASS |
@@ -157,8 +192,10 @@ When an outbound Buffer submission experiences a socket timeout or 504 Gateway e
 | 4-Gate Buffer Submission Pipeline | Journey B E2E (`journey-b-submission.e2e.test.ts`) | ✅ PASS |
 | Ambiguous Timeout & Reconciliation | Journey C E2E (`journey-c-recovery.e2e.test.ts`) | ✅ PASS |
 | Metric Normalization & Report Synthesis | Journey D E2E (`journey-d-reporting.e2e.test.ts`) | ✅ PASS |
+| Antigravity MCP Server & Tool Protocol | MCP Unit Suite (`packages/mcp/src/server.test.ts`) | ✅ PASS |
+| Antigravity Skill & Workspace Config | `.agents/skills/xgrowth-controller/SKILL.md` | ✅ PASS |
 | Frontend Shell & Navigation | Component tests (`App.test.tsx`) | ✅ PASS |
 | Database Seeding with Safe Defaults | `seed.ts` & `seed.test.ts` | ✅ PASS |
 | Multi-Stage Production Docker Build | `Dockerfile` & `docker-compose.yml` | ✅ PASS |
 
-**System Sign-Off**: The XGrowth AI platform meets all architectural specifications, safety boundaries, and operational constraints defined in `PRD.md`, `WORKFLOW.md`, `PROMPT.md`, and `AGENTS.md`.
+**System Sign-Off**: The XGrowth AI platform meets all architectural specifications, safety boundaries, operational constraints, and Google Antigravity agent control interfaces defined in `PRD.md`, `WORKFLOW.md`, `PROMPT.md`, and `AGENTS.md`.
