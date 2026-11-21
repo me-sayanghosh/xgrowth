@@ -97,6 +97,6 @@ const ContentItemSchema = new Schema<ContentItemDocument>(
 ContentItemSchema.index({ status: 1, createdAt: -1 });
 ContentItemSchema.index({ 'buffer.channelId': 1, 'buffer.submissionId': 1 });
 
-export const ContentItemModel =
-  mongoose.models.ContentItem ||
+export const ContentItemModel: mongoose.Model<ContentItemDocument> =
+  (mongoose.models.ContentItem as mongoose.Model<ContentItemDocument>) ||
   mongoose.model<ContentItemDocument>('ContentItem', ContentItemSchema);

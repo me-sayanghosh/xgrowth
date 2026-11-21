@@ -46,6 +46,6 @@ const ScheduledJobSchema = new Schema<ScheduledJobDocument>(
   },
 );
 
-export const ScheduledJobModel =
-  mongoose.models.ScheduledJob ||
+export const ScheduledJobModel: mongoose.Model<ScheduledJobDocument> =
+  (mongoose.models.ScheduledJob as mongoose.Model<ScheduledJobDocument>) ||
   mongoose.model<ScheduledJobDocument>('ScheduledJob', ScheduledJobSchema);

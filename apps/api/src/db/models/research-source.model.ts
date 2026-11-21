@@ -29,6 +29,6 @@ const ResearchSourceSchema = new Schema<ResearchSourceDocument>(
 
 ResearchSourceSchema.index({ enabled: 1, type: 1 });
 
-export const ResearchSourceModel =
-  mongoose.models.ResearchSource ||
+export const ResearchSourceModel: mongoose.Model<ResearchSourceDocument> =
+  (mongoose.models.ResearchSource as mongoose.Model<ResearchSourceDocument>) ||
   mongoose.model<ResearchSourceDocument>('ResearchSource', ResearchSourceSchema);

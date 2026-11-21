@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Share2, CheckCircle2, ShieldCheck, RefreshCw } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, RefreshCw } from 'lucide-react';
 
 interface Channel {
   id: string;

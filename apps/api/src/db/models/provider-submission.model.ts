@@ -47,6 +47,6 @@ const ProviderSubmissionSchema = new Schema<ProviderSubmissionDocument>(
 
 ProviderSubmissionSchema.index({ contentItemId: 1, status: 1 });
 
-export const ProviderSubmissionModel =
-  mongoose.models.ProviderSubmission ||
+export const ProviderSubmissionModel: mongoose.Model<ProviderSubmissionDocument> =
+  (mongoose.models.ProviderSubmission as mongoose.Model<ProviderSubmissionDocument>) ||
   mongoose.model<ProviderSubmissionDocument>('ProviderSubmission', ProviderSubmissionSchema);

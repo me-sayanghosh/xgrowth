@@ -1,11 +1,10 @@
-import { ContentItemModel, ContentItemDocument } from '../../db/models/content-item.model.js';
+import { ContentItemModel } from '../../db/models/content-item.model.js';
 import { ProviderSubmissionModel } from '../../db/models/provider-submission.model.js';
 import { BufferProvider } from './buffer-provider.interface.js';
 import { MockBufferProvider } from './mock-buffer.provider.js';
 import { SubmissionGatekeeper } from './submission-gatekeeper.js';
 import { ContentStatusEnum, AuditActionEnum } from '@xgrowth/shared';
 import { AuditService } from '../audit.service.js';
-import { getEnv } from '@xgrowth/config';
 
 export interface SubmitPostOptions {
   contentItemId: string;
@@ -22,7 +21,6 @@ export class BufferSubmissionService {
     if (provider) {
       this.provider = provider;
     } else {
-      const env = getEnv();
       this.provider = new MockBufferProvider(); // In dev/test defaults to safe mock unless explicit
     }
   }

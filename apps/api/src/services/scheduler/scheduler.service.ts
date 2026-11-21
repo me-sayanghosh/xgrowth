@@ -1,4 +1,4 @@
-import { ScheduledJobModel, ScheduledJobDocument } from '../../db/models/scheduled-job.model.js';
+import { ScheduledJobModel } from '../../db/models/scheduled-job.model.js';
 import { ScheduledJobType, ScheduledJobTypeEnum } from '@xgrowth/shared';
 import { logger } from '../../middlewares/logger.js';
 

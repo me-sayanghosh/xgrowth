@@ -41,7 +41,7 @@ describe('SchedulerService', () => {
     expect(job?.status).toBe('idle');
     expect(job?.lastRunAt).toBeDefined();
     expect(job?.logs.length).toBeGreaterThan(0);
-    expect(job?.logs[0].status).toBe('success');
+    expect(job?.logs[0]?.status).toBe('success');
   });
 
   it('marks job as failed when handler throws error', async () => {
@@ -54,7 +54,7 @@ describe('SchedulerService', () => {
 
     const job = await ScheduledJobModel.findOne({ type: ScheduledJobTypeEnum.ANALYTICS_IMPORT });
     expect(job?.status).toBe('failed');
-    expect(job?.logs[0].status).toBe('failed');
-    expect(job?.logs[0].error).toContain('Upstream analytics connection failed');
+    expect(job?.logs[0]?.status).toBe('failed');
+    expect(job?.logs[0]?.error).toContain('Upstream analytics connection failed');
   });
 });

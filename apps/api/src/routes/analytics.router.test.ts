@@ -36,11 +36,11 @@ describe('Analytics & Reporting Router Integration Test', () => {
     };
 
     const normalized = MetricNormalizer.normalizeSet(raw, 'buffer_x_channel');
-    expect(normalized.likes.available).toBe(true);
-    expect(normalized.likes.value).toBe(15);
-    expect(normalized.impressions.available).toBe(false);
-    expect(normalized.impressions.value).toBeNull();
-    expect(normalized.impressions.unavailableReason).toBe('Not available from connected provider');
+    expect(normalized.likes?.available).toBe(true);
+    expect(normalized.likes?.value).toBe(15);
+    expect(normalized.impressions?.available).toBe(false);
+    expect(normalized.impressions?.value).toBeNull();
+    expect(normalized.impressions?.unavailableReason).toBe('Not available from connected provider');
   });
 
   it('GET /api/analytics/summary returns 30-day aggregate data', async () => {

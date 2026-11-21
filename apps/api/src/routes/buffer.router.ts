@@ -50,7 +50,7 @@ bufferRouter.post('/submit', csrfProtection, mutationRateLimiter, async (req: Re
 bufferRouter.post('/reconcile/:id', csrfProtection, mutationRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const reconciler = new StatusReconciliationService();
-    const item = await reconciler.reconcileItem(req.params.id);
+    const item = await reconciler.reconcileItem(req.params.id as string);
     res.json({ success: true, item });
   } catch (error) {
     next(error);

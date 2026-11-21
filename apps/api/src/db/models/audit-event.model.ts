@@ -28,6 +28,6 @@ const AuditEventSchema = new Schema<AuditEventDocument>(
 
 AuditEventSchema.index({ action: 1, timestamp: -1 });
 
-export const AuditEventModel =
-  mongoose.models.AuditEvent ||
+export const AuditEventModel: mongoose.Model<AuditEventDocument> =
+  (mongoose.models.AuditEvent as mongoose.Model<AuditEventDocument>) ||
   mongoose.model<AuditEventDocument>('AuditEvent', AuditEventSchema);

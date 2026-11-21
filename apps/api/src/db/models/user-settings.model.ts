@@ -39,6 +39,6 @@ const UserSettingsSchema = new Schema<UserSettingsDocument>(
   },
 );
 
-export const UserSettingsModel =
-  mongoose.models.UserSettings ||
+export const UserSettingsModel: mongoose.Model<UserSettingsDocument> =
+  (mongoose.models.UserSettings as mongoose.Model<UserSettingsDocument>) ||
   mongoose.model<UserSettingsDocument>('UserSettings', UserSettingsSchema);

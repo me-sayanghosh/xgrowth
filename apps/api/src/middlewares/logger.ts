@@ -1,5 +1,5 @@
 import pino from 'pino';
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { RequestWithCorrelation } from './correlation.js';
 
 export const logger = pino({

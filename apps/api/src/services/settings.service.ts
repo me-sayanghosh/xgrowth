@@ -5,9 +5,9 @@ import { AuditActionEnum } from '@xgrowth/shared';
 
 export class SettingsService {
   public static async getSettings(): Promise<UserSettingsDocument> {
-    let settings = await UserSettingsModel.findOne();
+    const settings = await UserSettingsModel.findOne();
     if (!settings) {
-      settings = await this.seedDefaultSettings();
+      return this.seedDefaultSettings();
     }
     return settings;
   }

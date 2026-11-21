@@ -41,6 +41,6 @@ const AnalyticsSnapshotSchema = new Schema<AnalyticsSnapshotDocument>(
 
 AnalyticsSnapshotSchema.index({ contentItemId: 1, fetchedAt: -1 });
 
-export const AnalyticsSnapshotModel =
-  mongoose.models.AnalyticsSnapshot ||
+export const AnalyticsSnapshotModel: mongoose.Model<AnalyticsSnapshotDocument> =
+  (mongoose.models.AnalyticsSnapshot as mongoose.Model<AnalyticsSnapshotDocument>) ||
   mongoose.model<AnalyticsSnapshotDocument>('AnalyticsSnapshot', AnalyticsSnapshotSchema);

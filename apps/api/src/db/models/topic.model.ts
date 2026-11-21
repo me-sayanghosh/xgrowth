@@ -44,5 +44,6 @@ const TopicSchema = new Schema<TopicDocument>(
 
 TopicSchema.index({ status: 1, createdAt: -1 });
 
-export const TopicModel =
-  mongoose.models.Topic || mongoose.model<TopicDocument>('Topic', TopicSchema);
+export const TopicModel: mongoose.Model<TopicDocument> =
+  (mongoose.models.Topic as mongoose.Model<TopicDocument>) ||
+  mongoose.model<TopicDocument>('Topic', TopicSchema);

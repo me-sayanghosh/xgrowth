@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { logger } from './logger.js';
 import { RequestWithCorrelation } from './correlation.js';
@@ -14,8 +14,7 @@ export function errorHandler(
   err: Error,
   req: RequestWithCorrelation,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  next: NextFunction,
+  _next: NextFunction,
 ): void {
   const correlationId = req.correlationId;
 

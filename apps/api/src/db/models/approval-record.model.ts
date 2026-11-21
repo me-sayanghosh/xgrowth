@@ -33,6 +33,6 @@ const ApprovalRecordSchema = new Schema<ApprovalRecordDocument>(
 
 ApprovalRecordSchema.index({ contentItemId: 1, createdAt: -1 });
 
-export const ApprovalRecordModel =
-  mongoose.models.ApprovalRecord ||
+export const ApprovalRecordModel: mongoose.Model<ApprovalRecordDocument> =
+  (mongoose.models.ApprovalRecord as mongoose.Model<ApprovalRecordDocument>) ||
   mongoose.model<ApprovalRecordDocument>('ApprovalRecord', ApprovalRecordSchema);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, X, ShieldAlert, Sparkles } from 'lucide-react';
+import { Check, X, ShieldAlert } from 'lucide-react';
 import { ApprovalModal } from '../components/content/ApprovalModal.js';
 
 interface ContentItem {

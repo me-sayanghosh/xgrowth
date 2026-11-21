@@ -57,7 +57,7 @@ export class MockBufferProvider implements BufferProvider {
     });
   }
 
-  public async getPostStatus(postId: string): Promise<Result<{ status: string; publishedAt?: string }, BufferProviderError>> {
+  public async getPostStatus(_postId: string): Promise<Result<{ status: string; publishedAt?: string }, BufferProviderError>> {
     return ok({
       status: 'queued',
     });

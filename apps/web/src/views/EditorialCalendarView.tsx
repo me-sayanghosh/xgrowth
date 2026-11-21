@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Calendar as CalendarIcon, Clock, Send } from 'lucide-react';
 
 interface CalendarSlot {

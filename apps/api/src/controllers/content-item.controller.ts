@@ -61,7 +61,7 @@ export class ContentItemController {
     try {
       const validated = editItemSchema.parse(req.body);
       const actor = (req as { user?: { id?: string } }).user?.id || 'owner';
-      const updated = await ContentItemService.updateItem(req.params.id, validated, actor);
+      const updated = await ContentItemService.updateItem(req.params.id as string, validated, actor);
       res.json(updated);
     } catch (error) {
       next(error);
@@ -73,7 +73,7 @@ export class ContentItemController {
       const { channelId } = approveItemSchema.parse(req.body);
       const actor = (req as { user?: { id?: string } }).user?.id || 'owner';
       const approved = await ApprovalService.approveDraft({
-        contentItemId: req.params.id,
+        contentItemId: req.params.id as string,
         approvedBy: actor,
         channelId,
       });
