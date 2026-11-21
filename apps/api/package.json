@@ -1,0 +1,36 @@
+{
+  "name": "@xgrowth/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "start": "node ./dist/index.js",
+    "dev": "node --watch --loader ts-node/esm src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@xgrowth/config": "*",
+    "@xgrowth/shared": "*",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "mongoose": "^8.10.1",
+    "pino": "^9.6.0",
+    "rss-parser": "^3.13.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.10.1",
+    "@types/supertest": "^6.0.2",
+    "mongodb-memory-server": "^10.1.4",
+    "supertest": "^7.0.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
