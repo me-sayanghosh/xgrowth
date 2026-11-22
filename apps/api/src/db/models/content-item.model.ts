@@ -13,6 +13,7 @@ export interface ContentItemDocument extends Document {
   qualityFlags: string[];
   riskFlags: string[];
   contentHash?: string;
+  scheduledFor?: Date;
   approval?: {
     approvedBy: string;
     approvedAt: Date;
@@ -74,6 +75,10 @@ const ContentItemSchema = new Schema<ContentItemDocument>(
     },
     contentHash: {
       type: String,
+    },
+    scheduledFor: {
+      type: Date,
+      index: true,
     },
     approval: {
       approvedBy: { type: String },
