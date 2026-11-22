@@ -177,4 +177,17 @@ export class XGrowthApiClient {
     }
     throw new Error('No weekly analytics reports available');
   }
+
+  public async fetchResource(uri: string): Promise<unknown> {
+    if (uri === 'xgrowth://status') {
+      return this.getStatus();
+    }
+    if (uri === 'xgrowth://review-queue') {
+      return this.listDrafts('needs_review');
+    }
+    if (uri === 'xgrowth://weekly-report') {
+      return this.getWeeklyReport();
+    }
+    throw new Error(`Unsupported resource URI: ${uri}`);
+  }
 }

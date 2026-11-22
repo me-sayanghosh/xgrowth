@@ -261,5 +261,131 @@ export function createXGrowthMcpServer(client?: XGrowthApiClient): McpServer {
     },
   );
 
+  // ==========================================
+  // MCP Resources
+  // ==========================================
+
+  // Resource 1: System Status
+  server.resource(
+    'xgrowth_status',
+    'xgrowth://status',
+    { mimeType: 'application/json', description: 'Live operational status, pause state, and channel connectivity' },
+    async () => {
+      const status = await apiClient.getStatus();
+      return {
+        contents: [
+          {
+            uri: 'xgrowth://status',
+            mimeType: 'application/json',
+            text: JSON.stringify(status, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  // Resource 2: Review Queue
+  server.resource(
+    'xgrowth_review_queue',
+    'xgrowth://review-queue',
+    { mimeType: 'application/json', description: 'Pending review drafts in the queue' },
+    async () => {
+      const queue = await apiClient.listDrafts('needs_review');
+      return {
+        contents: [
+          {
+            uri: 'xgrowth://review-queue',
+            mimeType: 'application/json',
+            text: JSON.stringify(queue, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  // Resource 3: Weekly Report
+  server.resource(
+    'xgrowth_weekly_report',
+    'xgrowth://weekly-report',
+    { mimeType: 'text/markdown', description: 'Latest weekly content synthesis and week-over-week performance' },
+    async () => {
+      const report = await apiClient.getWeeklyReport();
+      return {
+        contents: [
+          {
+            uri: 'xgrowth://weekly-report',
+            mimeType: 'text/markdown',
+            text: report.markdownReport || JSON.stringify(report, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  // ==========================================
+  // MCP Prompts
+  // ==========================================
+
+  // Prompt 1: Draft Engineering Post
+  server.prompt(
+    'draft_engineering_post',
+    'Guide the assistant in drafting an authentic, non-clickbait developer post on X.',
+    {
+      topic: z.string().describe('The core engineering topic or breakthrough to cover'),
+      pillar: z.string().optional().describe('Target content pillar (e.g. Distributed Systems, TypeScript)'),
+      format: z.string().optional().describe('Content format: single_post, educational_tip, build_in_public, opinion_with_reasoning, or thread_draft'),
+    },
+    ({ topic, pillar, format }) => {
+      return {
+        description: `Drafting guide for technical topic: ${topic}`,
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `You are acting as the AI Content Strategist for XGrowth.
+Please draft an authentic, developer-oriented post on the topic: "${topic}".
+Target Pillar: ${pillar || 'Software Engineering'}
+Content Format: ${format || 'single_post'}
+
+Invariants to uphold:
+1. Strict 280-character boundary for standalone posts (or structured thread parts).
+2. Ground all claims exclusively in verifiable architectural principles or provided facts.
+3. Zero clickbait, zero superficial buzzwords (never use "game-changer", "mind-blowing", etc.).
+4. Focus on practical developer trade-offs, performance nuances, or production lessons.`,
+            },
+          },
+        ],
+      };
+    },
+  );
+
+  // Prompt 2: Analyze Performance
+  server.prompt(
+    'analyze_performance',
+    'Guide the assistant in analyzing weekly content analytics and recommending next-week experiments.',
+    {
+      focusPillar: z.string().optional().describe('Specific content pillar to evaluate deeply'),
+    },
+    ({ focusPillar }) => {
+      return {
+        description: 'Weekly analytics evaluation and hypothesis design',
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `Analyze recent content performance${focusPillar ? ` for pillar "${focusPillar}"` : ''} using the xgrowth://weekly-report resource.
+Synthesize:
+1. Top-performing formats and topics with positive week-over-week deltas.
+2. Under-performing topics requiring reframing or code-first examples.
+3. Exactly two actionable, testable experiments for the upcoming week.`,
+            },
+          },
+        ],
+      };
+    },
+  );
+
   return server;
 }

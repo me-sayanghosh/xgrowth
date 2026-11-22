@@ -243,4 +243,42 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
     const text = content[0]?.text ?? '';
     expect(text).toContain('Failed to fetch status: Connection refused');
   });
+
+  it('lists and reads registered MCP resources', async () => {
+    const listRes = await client.listResources();
+    const uris = listRes.resources.map((r) => r.uri);
+
+    expect(uris).toContain('xgrowth://status');
+    expect(uris).toContain('xgrowth://review-queue');
+    expect(uris).toContain('xgrowth://weekly-report');
+
+    const readStatus = await client.readResource({ uri: 'xgrowth://status' });
+    expect(readStatus.contents.length).toBe(1);
+    const statusContent = readStatus.contents[0] as { uri: string; text: string };
+    expect(statusContent.text).toContain('"globalPause": true');
+
+    const readQueue = await client.readResource({ uri: 'xgrowth://review-queue' });
+    expect(readQueue.contents.length).toBe(1);
+    const queueContent = readQueue.contents[0] as { uri: string; text: string };
+    expect(queueContent.text).toContain('item-101');
+  });
+
+  it('lists and retrieves registered MCP prompt templates', async () => {
+    const listRes = await client.listPrompts();
+    const names = listRes.prompts.map((p) => p.name);
+
+    expect(names).toContain('draft_engineering_post');
+    expect(names).toContain('analyze_performance');
+
+    const prompt = await client.getPrompt({
+      name: 'draft_engineering_post',
+      arguments: { topic: 'Event Loops in Node.js', pillar: 'Backend' },
+    });
+
+    expect(prompt.description).toContain('Event Loops in Node.js');
+    expect(prompt.messages.length).toBe(1);
+    const msg = prompt.messages[0]?.content as { type: string; text: string };
+    expect(msg.text).toContain('Strict 280-character boundary');
+    expect(msg.text).toContain('Zero clickbait');
+  });
 });

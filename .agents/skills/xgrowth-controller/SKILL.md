@@ -31,6 +31,31 @@ Antigravity Agent  -->  XGrowth MCP Server  -->  XGrowth Engine  -->  Buffer API
 
 ---
 
+## MCP Resources
+
+Antigravity agents can directly read live contextual resources using `read_resource`:
+
+| Resource URI | Description | MIME Type |
+|---|---|---|
+| `xgrowth://status` | Live operational status, emergency pause state, and channel connectivity | `application/json` |
+| `xgrowth://review-queue` | Pending review drafts in the queue needing approval | `application/json` |
+| `xgrowth://weekly-report` | Latest weekly content synthesis and week-over-week performance | `text/markdown` |
+
+---
+
+## MCP Prompts
+
+The server exports reusable prompt templates to guide the agent:
+
+1. **`draft_engineering_post`**:
+   - Guide for drafting authentic, non-clickbait developer posts on X adhering strictly to 280-character constraints and verified facts.
+   - Arguments: `topic`, `pillar` (optional), `format` (optional).
+2. **`analyze_performance`**:
+   - Guide for evaluating recent weekly reports, week-over-week delta metrics, and designing next-week hypotheses.
+   - Arguments: `focusPillar` (optional).
+
+---
+
 ## Operating Workflows
 
 ### 1. Check System Health & Status
