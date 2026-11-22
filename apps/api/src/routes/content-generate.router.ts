@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { DraftGeneratorService } from '../services/ai/draft-generator.service.js';
+import { HookGeneratorService } from '../services/ai/hook-generator.service.js';
 import { ContentFormatEnum } from '@xgrowth/shared';
 import { singleOwnerAuthMiddleware } from '../middlewares/auth.js';
 import { csrfProtection } from '../middlewares/csrf.js';
@@ -22,8 +23,17 @@ const generatePayloadSchema = z.object({
     ContentFormatEnum.OPINION_WITH_REASONING,
     ContentFormatEnum.THREAD_DRAFT,
   ]).default(ContentFormatEnum.SINGLE_POST),
+  language: z.enum(['en', 'bn', 'mixed']).optional(),
   sourceUrls: z.array(z.string().url()).optional(),
   variantCount: z.number().int().min(1).max(3).default(2),
+});
+
+const generateHooksSchema = z.object({
+  topic: z.string().min(1),
+  pillar: z.string().optional(),
+  keyTakeaway: z.string().optional(),
+  language: z.enum(['en', 'bn', 'mixed']).optional(),
+  count: z.number().int().min(1).max(5).default(4),
 });
 
 contentGenerateRouter.post(
@@ -40,6 +50,26 @@ contentGenerateRouter.post(
         success: true,
         count: items.length,
         items,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+contentGenerateRouter.post(
+  '/hooks/generate',
+  csrfProtection,
+  mutationRateLimiter,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validated = generateHooksSchema.parse(req.body);
+      const hooks = await HookGeneratorService.generateHooks(validated);
+
+      res.status(200).json({
+        success: true,
+        count: hooks.length,
+        hooks,
       });
     } catch (error) {
       next(error);
