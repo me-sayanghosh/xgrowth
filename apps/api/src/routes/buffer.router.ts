@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { ChannelDiscoveryService } from '../services/buffer/channel-discovery.service.js';
 import { BufferSubmissionService } from '../services/buffer/submission.service.js';
 import { StatusReconciliationService } from '../services/buffer/reconciliation.service.js';
+import { ManualQueueExportService } from '../services/buffer/manual-export.service.js';
+import { BufferQuotaTracker } from '../services/buffer/rate-limiter.js';
 import { singleOwnerAuthMiddleware } from '../middlewares/auth.js';
 import { csrfProtection } from '../middlewares/csrf.js';
 import { mutationRateLimiter } from '../middlewares/rate-limit.js';
@@ -15,6 +17,28 @@ bufferRouter.get('/channels', async (_req: Request, res: Response, next: NextFun
   try {
     const channels = await ChannelDiscoveryService.listXChannels();
     res.json(channels);
+  } catch (error) {
+    next(error);
+  }
+});
+
+bufferRouter.get('/quota', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const quota = BufferQuotaTracker.getQuotaStatus();
+    res.json(quota);
+  } catch (error) {
+    next(error);
+  }
+});
+
+bufferRouter.get('/export', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const format = req.query.format === 'csv' ? 'csv' : 'json';
+    const result = await ManualQueueExportService.export(format);
+
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.content);
   } catch (error) {
     next(error);
   }
