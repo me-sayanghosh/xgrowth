@@ -1,5 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Check, X, ShieldAlert, Search, Eye, Edit3, AlertTriangle, Sparkles } from 'lucide-react';
+import {
+  Check,
+  X,
+  ShieldAlert,
+  Search,
+  Eye,
+  Edit3,
+  AlertTriangle,
+  Sparkles,
+  CheckSquare,
+  Square,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
 import { ApprovalModal } from '../components/content/ApprovalModal.js';
 import { XPostPreview } from '../components/content/XPostPreview.js';
 import { ThreadVisualizer } from '../components/content/ThreadVisualizer.js';
@@ -49,6 +62,10 @@ export function ReviewQueueView() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('needs_review');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Batch actions state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [batchLoading, setBatchLoading] = useState(false);
+
   const fetchItems = () => {
     const url = statusFilter === 'all' ? '/api/content/items' : `/api/content/items?status=${statusFilter}`;
     fetch(url)
@@ -56,6 +73,7 @@ export function ReviewQueueView() {
       .then((data) => {
         if (Array.isArray(data)) {
           setItems(data);
+          setSelectedIds([]);
           if (data.length > 0) {
             setSelectedItem(data[0]);
             setEditedText(data[0].text);
@@ -89,6 +107,57 @@ export function ReviewQueueView() {
     setSelectedItem(item);
     setEditedText(item.text);
     setEditedThreadParts(item.threadParts || []);
+  };
+
+  const handleToggleSelectId = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredItems.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredItems.map((i) => i._id));
+    }
+  };
+
+  const handleBatchApprove = async () => {
+    if (selectedIds.length === 0) return;
+    setBatchLoading(true);
+    try {
+      await fetch('/api/content/items/batch-approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-xgrowth-csrf': '1',
+        },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      fetchItems();
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const handleBatchReject = async () => {
+    if (selectedIds.length === 0) return;
+    setBatchLoading(true);
+    try {
+      await fetch('/api/content/items/batch-reject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-xgrowth-csrf': '1',
+        },
+        body: JSON.stringify({ ids: selectedIds, reason: 'Batch rejected from queue toolbar' }),
+      });
+      fetchItems();
+    } finally {
+      setBatchLoading(false);
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -170,8 +239,43 @@ export function ReviewQueueView() {
         </div>
       </div>
 
+      {/* Batch Action Toolbar */}
+      {selectedIds.length > 0 && (
+        <div className="p-3 bg-sky-950/60 border border-sky-800/80 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center space-x-2 text-xs font-semibold text-sky-200">
+            <CheckCircle2 className="w-4 h-4 text-sky-400" />
+            <span>{selectedIds.length} item(s) selected for bulk operation</span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleBatchApprove}
+              disabled={batchLoading}
+              className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow disabled:opacity-50 transition"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Bulk Approve</span>
+            </button>
+            <button
+              onClick={handleBatchReject}
+              disabled={batchLoading}
+              className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow disabled:opacity-50 transition"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>Bulk Reject</span>
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Queue List with Search */}
+        {/* Left: Queue List with Search and Checkboxes */}
         <div className="lg:col-span-1 space-y-3">
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -185,8 +289,19 @@ export function ReviewQueueView() {
           </div>
 
           <div className="flex items-center justify-between text-xs text-slate-400 px-1 font-semibold uppercase tracking-wider">
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="flex items-center space-x-1.5 text-slate-400 hover:text-white"
+            >
+              {selectedIds.length === filteredItems.length && filteredItems.length > 0 ? (
+                <CheckSquare className="w-3.5 h-3.5 text-sky-400" />
+              ) : (
+                <Square className="w-3.5 h-3.5" />
+              )}
+              <span>Select All</span>
+            </button>
             <span>Drafts ({filteredItems.length})</span>
-            {statusFilter !== 'all' && <span>Filter: {statusFilter.replace('_', ' ')}</span>}
           </div>
 
           <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
@@ -194,29 +309,43 @@ export function ReviewQueueView() {
               <div
                 key={item._id}
                 onClick={() => handleSelect(item)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start space-x-3 ${
                   selectedItem?._id === item._id
                     ? 'bg-slate-800 border-sky-500 shadow-sm'
                     : 'bg-slate-900 border-slate-800 hover:border-slate-700'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-sky-400 border border-slate-700">
-                    {item.format}
-                  </span>
-                  <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${
-                      item.status === 'approved'
-                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                        : item.status === 'rejected'
-                        ? 'bg-rose-950 text-rose-400 border border-rose-800'
-                        : 'bg-amber-950 text-amber-400 border border-amber-800'
-                    }`}
-                  >
-                    {item.status.replace('_', ' ')}
-                  </span>
+                <button
+                  type="button"
+                  onClick={(e) => handleToggleSelectId(item._id, e)}
+                  className="mt-0.5 text-slate-500 hover:text-sky-400 shrink-0"
+                >
+                  {selectedIds.includes(item._id) ? (
+                    <CheckSquare className="w-4 h-4 text-sky-400" />
+                  ) : (
+                    <Square className="w-4 h-4" />
+                  )}
+                </button>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-sky-400 border border-slate-700">
+                      {item.format}
+                    </span>
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${
+                        item.status === 'approved'
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                          : item.status === 'rejected'
+                          ? 'bg-rose-950 text-rose-400 border border-rose-800'
+                          : 'bg-amber-950 text-amber-400 border border-amber-800'
+                      }`}
+                    >
+                      {item.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-200 line-clamp-3">{item.text}</p>
                 </div>
-                <p className="mt-2 text-sm text-slate-200 line-clamp-3">{item.text}</p>
               </div>
             ))}
             {filteredItems.length === 0 && (
