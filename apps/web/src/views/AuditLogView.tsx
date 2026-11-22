@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, RefreshCw, Search, Filter, AlertCircle } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Search, Filter, AlertCircle, Download } from 'lucide-react';
 
 interface AuditEvent {
   id: string;
@@ -54,6 +54,13 @@ export function AuditLogView() {
     );
   });
 
+  const handleExportCsv = () => {
+    const url = actionFilter
+      ? `/api/audit-logs/export?action=${encodeURIComponent(actionFilter)}`
+      : '/api/audit-logs/export';
+    window.location.href = url;
+  };
+
   const getActionBadgeColor = (action: string) => {
     switch (action) {
       case 'APPROVAL_GRANTED':
@@ -83,14 +90,23 @@ export function AuditLogView() {
             Immutable ledger tracking all approvals, invalidations, configuration changes, and external submissions.
           </p>
         </div>
-        <button
-          onClick={fetchLogs}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors border border-slate-700 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleExportCsv}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors border border-slate-700"
+          >
+            <Download className="w-3.5 h-3.5 text-sky-400" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={fetchLogs}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors border border-slate-700 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
