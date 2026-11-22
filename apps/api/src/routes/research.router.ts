@@ -13,6 +13,9 @@ researchRouter.use(singleOwnerAuthMiddleware);
 // Research sources
 researchRouter.get('/sources', ResearchSourceController.listSources);
 researchRouter.post('/sources', csrfProtection, ResearchSourceController.createSource);
+researchRouter.patch('/sources/:id', csrfProtection, ResearchSourceController.updateSource);
+researchRouter.delete('/sources/:id', csrfProtection, ResearchSourceController.deleteSource);
+researchRouter.post('/sources/:id/sync', csrfProtection, ResearchSourceController.syncSource);
 
 // Candidate topics
 const createCandidateSchema = z.object({
