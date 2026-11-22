@@ -19,6 +19,7 @@ export interface GenerateDraftsInput {
   format: ContentFormat;
   brandVoiceTraits: string[];
   brandVoiceAvoid: string[];
+  language?: 'en' | 'bn' | 'mixed';
   sourceUrls?: string[];
   variantCount?: number;
 }

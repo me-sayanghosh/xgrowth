@@ -14,6 +14,7 @@ export interface RequestDraftGenerationInput {
   whyItMatters: string;
   verifiedFacts: string[];
   format: ContentFormat;
+  language?: 'en' | 'bn' | 'mixed';
   sourceUrls?: string[];
   variantCount?: number;
 }
@@ -43,6 +44,7 @@ export class DraftGeneratorService {
       format: input.format,
       brandVoiceTraits: settings.voiceTraits,
       brandVoiceAvoid: settings.voiceAvoid,
+      language: input.language || settings.language || 'en',
       sourceUrls: input.sourceUrls,
       variantCount: input.variantCount || 2,
     });

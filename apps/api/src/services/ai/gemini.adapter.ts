@@ -1,6 +1,7 @@
 import { AIProvider, GenerateDraftsInput, DraftVariant, AIError } from './ai-provider.interface.js';
 import { Result, ok, err } from '@xgrowth/shared';
 import { getEnv } from '@xgrowth/config';
+import { buildSystemPrompt, buildUserPrompt } from './prompts.js';
 
 export class GeminiAIAdapter implements AIProvider {
   public readonly name = 'gemini';
@@ -20,24 +21,22 @@ export class GeminiAIAdapter implements AIProvider {
 
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    const systemPrompt = `You are an expert technical content writer creating engaging, authentic posts on X for a senior software engineer.
-Brand Voice Traits: ${input.brandVoiceTraits.join(', ')}
-Avoid: ${input.brandVoiceAvoid.join(', ')}
-Formatting: Must fit within 280 characters for single posts or provide sequential thread parts.
-Never hallucinate statistics or credentials. Ground facts exclusively in the provided source material.
-Respond in valid JSON with an array named "variants" containing objects with:
-- text: string (the full post text)
-- hook: string (the first engaging sentence)
-- angle: string (why this post is interesting)
-- threadParts: array of strings (if thread format, otherwise empty)`;
+    const systemPrompt = buildSystemPrompt({
+      format: input.format,
+      brandVoiceTraits: input.brandVoiceTraits,
+      brandVoiceAvoid: input.brandVoiceAvoid,
+      language: input.language,
+    });
 
-    const userPrompt = `Topic: ${input.topic}
-Pillar: ${input.topicPillar}
-Why it matters: ${input.whyItMatters}
-Verified Facts:
-${input.verifiedFacts.map((f) => `- ${f}`).join('\n')}
-Format: ${input.format}
-Generate ${input.variantCount || 2} distinct variants.`;
+    const userPrompt = buildUserPrompt({
+      topic: input.topic,
+      topicPillar: input.topicPillar,
+      whyItMatters: input.whyItMatters,
+      verifiedFacts: input.verifiedFacts,
+      format: input.format,
+      variantCount: input.variantCount,
+      language: input.language,
+    });
 
     try {
       const response = await fetch(endpoint, {
