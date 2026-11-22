@@ -74,7 +74,7 @@ export function XPostPreview({
           <div className="leading-tight">
             <div className="flex items-center space-x-1.5">
               <span className="font-bold text-sm text-white">{authorName}</span>
-              <span className="text-xs text-slate-500">@{handle}</span>
+              <span className="text-xs text-slate-500">{`@${handle}`}</span>
             </div>
             <div className="text-[11px] text-slate-500">Just now • Draft Preview</div>
           </div>

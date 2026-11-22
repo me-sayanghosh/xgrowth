@@ -59,7 +59,7 @@ export function ThreadVisualizer({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
-          <span>Thread Breakdown ({parts.length} tweets)</span>
+          <span>{`Thread Breakdown (${parts.length} tweets)`}</span>
         </h4>
         {!readOnly && (
           <button
