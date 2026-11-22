@@ -33,6 +33,29 @@ analyticsRouter.get('/reports', async (_req: Request, res: Response, next: NextF
   }
 });
 
+analyticsRouter.get('/reports/:id/export', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const format = req.query.format === 'json' ? 'json' : 'markdown';
+    const reportId = (req.params.id as string) || 'latest';
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const report = await WeeklyReportGenerator.generateReport(sevenDaysAgo, new Date());
+    report.id = reportId;
+
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="xgrowth-report-${reportId}.json"`);
+      res.send(JSON.stringify(report, null, 2));
+    } else {
+      res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="xgrowth-report-${reportId}.md"`);
+      res.send(report.markdownReport);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
 analyticsRouter.post('/reports/generate', csrfProtection, mutationRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { startDate, endDate } = req.body;
