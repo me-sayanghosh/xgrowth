@@ -23,6 +23,16 @@ const rejectItemSchema = z.object({
   reason: z.string().optional(),
 });
 
+const batchApproveSchema = z.object({
+  ids: z.array(z.string()).min(1),
+  channelId: z.string().optional(),
+});
+
+const batchRejectSchema = z.object({
+  ids: z.array(z.string()).min(1),
+  reason: z.string().optional(),
+});
+
 export class ContentItemController {
   public static async listItems(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -107,6 +117,79 @@ export class ContentItemController {
       });
 
       res.json({ success: true, item });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async batchApprove(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { ids, channelId } = batchApproveSchema.parse(req.body);
+      const actor = (req as { user?: { id?: string } }).user?.id || 'owner';
+      const approved: any[] = [];
+      const errors: Array<{ id: string; error: string }> = [];
+
+      for (const id of ids) {
+        try {
+          const item = await ApprovalService.approveDraft({
+            contentItemId: id,
+            approvedBy: actor,
+            channelId,
+          });
+          approved.push(item);
+        } catch (err) {
+          errors.push({ id, error: (err as Error).message });
+        }
+      }
+
+      res.json({
+        success: true,
+        count: approved.length,
+        items: approved,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async batchReject(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { ids, reason } = batchRejectSchema.parse(req.body);
+      const actor = (req as { user?: { id?: string } }).user?.id || 'owner';
+      const rejected: any[] = [];
+      const errors: Array<{ id: string; error: string }> = [];
+
+      for (const id of ids) {
+        try {
+          const item = await ContentItemModel.findById(id);
+          if (!item) {
+            errors.push({ id, error: 'Not found' });
+            continue;
+          }
+          ContentStateMachine.assertTransition(item.status, ContentStatusEnum.REJECTED);
+          item.status = ContentStatusEnum.REJECTED;
+          await item.save();
+
+          await AuditService.recordEvent({
+            action: AuditActionEnum.CONTENT_REJECTED,
+            actor,
+            targetId: item._id.toString(),
+            targetType: 'ContentItem',
+            metadata: { reason: reason || 'Batch rejected' },
+          });
+          rejected.push(item);
+        } catch (err) {
+          errors.push({ id, error: (err as Error).message });
+        }
+      }
+
+      res.json({
+        success: true,
+        count: rejected.length,
+        items: rejected,
+        errors: errors.length > 0 ? errors : undefined,
+      });
     } catch (error) {
       next(error);
     }

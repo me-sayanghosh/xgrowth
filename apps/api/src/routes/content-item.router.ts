@@ -9,6 +9,8 @@ export const contentItemRouter = Router();
 contentItemRouter.use(singleOwnerAuthMiddleware);
 
 contentItemRouter.get('/items', ContentItemController.listItems);
+contentItemRouter.post('/items/batch-approve', csrfProtection, mutationRateLimiter, ContentItemController.batchApprove);
+contentItemRouter.post('/items/batch-reject', csrfProtection, mutationRateLimiter, ContentItemController.batchReject);
 contentItemRouter.get('/items/:id', ContentItemController.getItemById);
 contentItemRouter.patch('/items/:id', csrfProtection, mutationRateLimiter, ContentItemController.patchItem);
 contentItemRouter.post('/items/:id/approve', csrfProtection, mutationRateLimiter, ContentItemController.approveItem);
