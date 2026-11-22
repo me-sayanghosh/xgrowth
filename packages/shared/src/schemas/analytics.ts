@@ -42,6 +42,7 @@ export const weeklyReportSchema = z.object({
   whatNeedsTesting: z.array(z.string()),
   nextExperiments: z.array(z.string()),
   markdownReport: z.string(),
+  wowDeltas: z.record(z.any()).optional(),
   generatedAt: z.string().datetime(),
 });
 

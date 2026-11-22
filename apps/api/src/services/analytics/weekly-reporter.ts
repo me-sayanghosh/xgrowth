@@ -1,5 +1,5 @@
 import { WeeklyReport } from '@xgrowth/shared';
-import { PerformanceAggregator } from './aggregator.js';
+import { PerformanceAggregator, WowDeltaReport } from './aggregator.js';
 import { ContentItemModel } from '../../db/models/content-item.model.js';
 import { ContentStatusEnum } from '@xgrowth/shared';
 import crypto from 'crypto';
@@ -12,6 +12,7 @@ export class WeeklyReportGenerator {
     });
 
     const aggregates = await PerformanceAggregator.aggregateByPillar(startDate);
+    const wowDeltas: WowDeltaReport = await PerformanceAggregator.calculateWowDeltas(startDate, endDate);
 
     const topPillars = [...aggregates].sort((a, b) => b.totalLikes - a.totalLikes);
     const bestPillar = topPillars[0]?.pillar || 'Software engineering';
@@ -31,6 +32,8 @@ export class WeeklyReportGenerator {
       'Test a 3-part educational thread on Node.js streams performance.',
     ];
 
+    const formatDeltaSign = (pct: number) => (pct > 0 ? `+${pct}%` : `${pct}%`);
+
     const markdownReport = `# Weekly X Content Report
 
 - Reporting period: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}
@@ -38,9 +41,11 @@ export class WeeklyReportGenerator {
 - Data fetched at: ${new Date().toISOString()}
 - Coverage / missing metrics: Native impression analytics marked unavailable where unsupported by provider tier.
 
-## Summary
-- Posts queued / published: ${published.length}
-- Engagement summary: ${topPillars.reduce((acc, p) => acc + p.totalLikes, 0)} likes recorded across pillars.
+## Summary & Week-over-Week (WoW) Changes
+- Posts: ${wowDeltas.posts.current} (${formatDeltaSign(wowDeltas.posts.deltaPercent)} vs previous period)
+- Total Likes: ${wowDeltas.likes.current} (${formatDeltaSign(wowDeltas.likes.deltaPercent)})
+- Total Reposts: ${wowDeltas.reposts.current} (${formatDeltaSign(wowDeltas.reposts.deltaPercent)})
+- Total Replies: ${wowDeltas.replies.current} (${formatDeltaSign(wowDeltas.replies.deltaPercent)})
 
 ## Top Content Pillars
 ${topPillars.map((p) => `- **${p.pillar}**: ${p.postCount} posts | ${p.totalLikes} likes | ${p.totalReposts} reposts`).join('\n')}
@@ -65,7 +70,10 @@ ${nextExperiments.map((e, idx) => `${idx + 1}. ${e}`).join('\n')}
       summaryMetrics: {
         publishedCount: published.length,
         topPillar: bestPillar,
+        postsWowPct: formatDeltaSign(wowDeltas.posts.deltaPercent),
+        likesWowPct: formatDeltaSign(wowDeltas.likes.deltaPercent),
       },
+      wowDeltas: wowDeltas as unknown as Record<string, unknown>,
       topContent: published.slice(0, 5).map((p) => ({
         id: p._id.toString(),
         text: p.text.slice(0, 80) + '...',
