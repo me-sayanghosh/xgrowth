@@ -1,8 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { ResearchSourceController } from '../controllers/research-source.controller.js';
+import { ResearchSourceModel } from '../db/models/research-source.model.js';
 import { TopicModel } from '../db/models/topic.model.js';
 import { BriefExtractorService } from '../services/research/brief-extractor.js';
+import { OpmlService } from '../services/research/opml-importer.js';
 import { singleOwnerAuthMiddleware } from '../middlewares/auth.js';
 import { csrfProtection } from '../middlewares/csrf.js';
 
@@ -13,6 +15,54 @@ researchRouter.use(singleOwnerAuthMiddleware);
 // Research sources
 researchRouter.get('/sources', ResearchSourceController.listSources);
 researchRouter.post('/sources', csrfProtection, ResearchSourceController.createSource);
+researchRouter.get('/sources/opml/export', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const sources = await ResearchSourceModel.find().lean();
+    const opml = OpmlService.exportToOpml(sources);
+    res.setHeader('Content-Type', 'text/x-opml; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="xgrowth-feeds.opml"');
+    res.send(opml);
+  } catch (error) {
+    next(error);
+  }
+});
+
+researchRouter.post('/sources/opml/import', csrfProtection, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const xml = typeof req.body === 'string' ? req.body : req.body.opml;
+    if (!xml || typeof xml !== 'string') {
+      res.status(400).json({ error: 'INVALID_PAYLOAD', message: 'Missing opml content in request body.' });
+      return;
+    }
+
+    const parsedFeeds = OpmlService.parseOpml(xml);
+    const created = [];
+
+    for (const feed of parsedFeeds) {
+      const existing = await ResearchSourceModel.findOne({ url: feed.url });
+      if (!existing) {
+        const item = await ResearchSourceModel.create({
+          name: feed.name,
+          url: feed.url,
+          category: feed.category,
+          type: 'rss',
+          credibilityScore: 4,
+          enabled: true,
+        });
+        created.push(item);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      importedCount: created.length,
+      sources: created,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 researchRouter.patch('/sources/:id', csrfProtection, ResearchSourceController.updateSource);
 researchRouter.delete('/sources/:id', csrfProtection, ResearchSourceController.deleteSource);
 researchRouter.post('/sources/:id/sync', csrfProtection, ResearchSourceController.syncSource);
