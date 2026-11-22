@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Check, X, ShieldAlert, Search } from 'lucide-react';
+import { Check, X, ShieldAlert, Search, Eye, Edit3, AlertTriangle, Sparkles } from 'lucide-react';
 import { ApprovalModal } from '../components/content/ApprovalModal.js';
+import { XPostPreview } from '../components/content/XPostPreview.js';
+import { ThreadVisualizer } from '../components/content/ThreadVisualizer.js';
 
 interface ContentItem {
   _id: string;
   status: string;
   format: string;
   text: string;
+  threadParts?: string[];
   topicPillar?: string;
   qualityFlags?: string[];
   riskFlags?: string[];
@@ -14,11 +17,34 @@ interface ContentItem {
 }
 
 type StatusFilter = 'needs_review' | 'approved' | 'rejected' | 'all';
+type ViewMode = 'editor' | 'preview';
+
+const BANNED_BUZZWORDS = [
+  'game-changer',
+  'mind-blowing',
+  'revolutionize',
+  'secret sauce',
+  '10x developer',
+  'growth hack',
+  'cheat code',
+  'passive income',
+];
+
+const ENGAGEMENT_BAIT_PHRASES = [
+  'like if you agree',
+  'repost to share',
+  'rt if',
+  'comment below for',
+  'drop a comment',
+  'follow me for more',
+];
 
 export function ReviewQueueView() {
   const [items, setItems] = useState<ContentItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
   const [editedText, setEditedText] = useState('');
+  const [editedThreadParts, setEditedThreadParts] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('needs_review');
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,9 +59,11 @@ export function ReviewQueueView() {
           if (data.length > 0) {
             setSelectedItem(data[0]);
             setEditedText(data[0].text);
+            setEditedThreadParts(data[0].threadParts || []);
           } else {
             setSelectedItem(null);
             setEditedText('');
+            setEditedThreadParts([]);
           }
         }
       })
@@ -60,14 +88,19 @@ export function ReviewQueueView() {
   const handleSelect = (item: ContentItem) => {
     setSelectedItem(item);
     setEditedText(item.text);
+    setEditedThreadParts(item.threadParts || []);
   };
 
   const handleSaveEdit = async () => {
     if (!selectedItem) return;
+    const payload: { text: string; threadParts?: string[] } = { text: editedText };
+    if (selectedItem.format === 'thread_draft' || editedThreadParts.length > 0) {
+      payload.threadParts = editedThreadParts;
+    }
     const res = await fetch(`/api/content/items/${selectedItem._id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'x-xgrowth-csrf': '1' },
-      body: JSON.stringify({ text: editedText }),
+      body: JSON.stringify(payload),
     });
     const updated = await res.json();
     setSelectedItem(updated);
@@ -85,8 +118,31 @@ export function ReviewQueueView() {
     fetchItems();
   };
 
-  const charLength = editedText.length;
-  const isOverLimit = charLength > 280;
+  // Real-time Tone Linter
+  const liveLinter = useMemo(() => {
+    const textLower = editedText.toLowerCase();
+    const detectedBuzzwords = BANNED_BUZZWORDS.filter((word) => textLower.includes(word));
+    const detectedBait = ENGAGEMENT_BAIT_PHRASES.filter((phrase) => textLower.includes(phrase));
+    const isOverLimit = editedText.length > 280;
+    const warnings: string[] = [];
+
+    if (isOverLimit && selectedItem?.format !== 'thread_draft') {
+      warnings.push(`Post exceeds 280 characters (${editedText.length} chars). It will fail X publishing validation.`);
+    }
+    if (detectedBuzzwords.length > 0) {
+      warnings.push(`Avoided buzzword detected: "${detectedBuzzwords.join(', ')}". Replace with technical substance.`);
+    }
+    if (detectedBait.length > 0) {
+      warnings.push(`Engagement bait detected: "${detectedBait.join(', ')}". Prohibited under platform conduct policy.`);
+    }
+
+    return {
+      isValid: warnings.length === 0,
+      warnings,
+      charCount: editedText.length,
+      isOverLimit,
+    };
+  }, [editedText, selectedItem]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -171,43 +227,119 @@ export function ReviewQueueView() {
           </div>
         </div>
 
-        {/* Right: Split-Pane Editor */}
+        {/* Right: Split-Pane Editor & Live Preview */}
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-5">
           {selectedItem ? (
             <>
+              {/* Header with Topic Pillar and View Mode Switcher */}
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold px-2.5 py-1 bg-sky-950 text-sky-400 border border-sky-800 rounded-full">
-                  {selectedItem.topicPillar || 'Technical Post'}
-                </span>
-                <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    isOverLimit
-                      ? 'bg-rose-950 text-rose-400 border border-rose-800'
-                      : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                  }`}
-                >
-                  {charLength}/280 chars
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-bold px-2.5 py-1 bg-sky-950 text-sky-400 border border-sky-800 rounded-full">
+                    {selectedItem.topicPillar || 'Technical Post'}
+                  </span>
+                  <span className="text-xs text-slate-500 font-mono">
+                    Format: {selectedItem.format}
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-1 p-1 bg-slate-950 border border-slate-800 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('editor')}
+                    className={`flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-medium transition ${
+                      viewMode === 'editor' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Editor</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('preview')}
+                    className={`flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-medium transition ${
+                      viewMode === 'preview' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Live X Preview</span>
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Draft Content
-                </label>
-                <textarea
-                  rows={6}
-                  value={editedText}
-                  onChange={(e) => setEditedText(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-sky-500"
-                />
-              </div>
+              {/* View Mode Content */}
+              {viewMode === 'editor' ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        Draft Content
+                      </label>
+                      <span
+                        className={`text-xs font-mono font-semibold px-2 py-0.5 rounded ${
+                          liveLinter.isOverLimit
+                            ? 'bg-rose-950 text-rose-400 border border-rose-800'
+                            : 'bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        {liveLinter.charCount}/280 chars
+                      </span>
+                    </div>
+                    <textarea
+                      rows={6}
+                      value={editedText}
+                      onChange={(e) => setEditedText(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
 
-              {/* Quality & Risk Warnings */}
+                  {/* Thread parts editor if thread format */}
+                  {(selectedItem.format === 'thread_draft' || editedThreadParts.length > 0) && (
+                    <ThreadVisualizer
+                      parts={editedThreadParts.length > 0 ? editedThreadParts : [editedText]}
+                      onChange={(parts) => setEditedThreadParts(parts)}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="py-2 flex justify-center">
+                  {selectedItem.format === 'thread_draft' || editedThreadParts.length > 1 ? (
+                    <ThreadVisualizer
+                      parts={editedThreadParts.length > 0 ? editedThreadParts : [editedText]}
+                      onChange={(parts) => setEditedThreadParts(parts)}
+                      readOnly
+                    />
+                  ) : (
+                    <XPostPreview text={editedText} />
+                  )}
+                </div>
+              )}
+
+              {/* In-Line Real-Time Tone Linter Banner */}
+              {!liveLinter.isValid ? (
+                <div className="p-3 bg-amber-950/40 border border-amber-800 rounded-lg space-y-1.5">
+                  <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-300">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <span>Live Quality &amp; Tone Warnings:</span>
+                  </div>
+                  {liveLinter.warnings.map((warn, i) => (
+                    <p key={i} className="text-xs text-amber-200 pl-5">
+                      • {warn}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-2.5 bg-emerald-950/30 border border-emerald-900/60 rounded-lg flex items-center space-x-2 text-xs text-emerald-300">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Quality Check Passed: Complies with brand voice and character constraints.</span>
+                </div>
+              )}
+
+              {/* Stored Risk Flags if any */}
               {selectedItem.riskFlags && selectedItem.riskFlags.length > 0 && (
                 <div className="p-3 bg-rose-950/40 border border-rose-800 rounded-lg space-y-1">
                   <div className="flex items-center space-x-1.5 text-xs font-bold text-rose-300">
                     <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>Policy &amp; Quality Warnings:</span>
+                    <span>Original Generation Risk Flags:</span>
                   </div>
                   {selectedItem.riskFlags.map((flag, idx) => (
                     <p key={idx} className="text-xs text-rose-200 pl-5">• {flag}</p>
@@ -255,7 +387,7 @@ export function ReviewQueueView() {
 
       {showApprovalModal && selectedItem && (
         <ApprovalModal
-          item={{ ...selectedItem, text: editedText }}
+          item={{ ...selectedItem, text: editedText, threadParts: editedThreadParts }}
           onClose={() => setShowApprovalModal(false)}
           onApproved={() => {
             setShowApprovalModal(false);

@@ -7,6 +7,7 @@ interface ApprovalModalProps {
     text: string;
     format: string;
     topicPillar?: string;
+    threadParts?: string[];
   };
   onClose: () => void;
   onApproved: () => void;
