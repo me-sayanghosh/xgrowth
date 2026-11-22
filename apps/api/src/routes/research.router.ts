@@ -84,3 +84,57 @@ researchRouter.post('/candidates/:id/to-brief', csrfProtection, async (req: Requ
     next(error);
   }
 });
+
+researchRouter.get('/candidates/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const candidate = await TopicModel.findById(req.params.id);
+    if (!candidate) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Candidate topic not found.' });
+      return;
+    }
+    res.json(candidate);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const updateCandidateSchema = z.object({
+  title: z.string().min(1).optional(),
+  topicPillar: z.string().optional(),
+  excerpt: z.string().optional(),
+  status: z.enum(['discovered', 'briefed', 'archived']).optional(),
+  freshnessScore: z.number().min(1).max(5).optional(),
+  credibilityScore: z.number().min(1).max(5).optional(),
+  relevanceScore: z.number().min(1).max(5).optional(),
+});
+
+researchRouter.patch('/candidates/:id', csrfProtection, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const validated = updateCandidateSchema.parse(req.body);
+    const updated = await TopicModel.findByIdAndUpdate(
+      req.params.id,
+      { $set: validated },
+      { new: true },
+    );
+    if (!updated) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Candidate topic not found.' });
+      return;
+    }
+    res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+});
+
+researchRouter.delete('/candidates/:id', csrfProtection, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const deleted = await TopicModel.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Candidate topic not found.' });
+      return;
+    }
+    res.json({ success: true, message: 'Candidate topic deleted.' });
+  } catch (error) {
+    next(error);
+  }
+});
