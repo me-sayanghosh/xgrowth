@@ -75,4 +75,57 @@ describe('Research Desk API Integration Test', () => {
     expect(briefRes.body.brief.uncertainties.length).toBeGreaterThan(0);
     expect(briefRes.body.candidate.status).toBe('briefed');
   });
+
+  it('PATCH and DELETE /api/research/sources/:id updates and removes source', async () => {
+    const sourceRes = await request(app)
+      .post('/api/research/sources')
+      .send({
+        name: 'Temporary Tech Feed',
+        url: 'https://example.com/rss.xml',
+        type: 'rss',
+        category: 'Architecture',
+      });
+
+    const sourceId = sourceRes.body._id;
+
+    // Update
+    const patchRes = await request(app)
+      .patch(`/api/research/sources/${sourceId}`)
+      .send({ enabled: false, credibilityScore: 5 });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.enabled).toBe(false);
+    expect(patchRes.body.credibilityScore).toBe(5);
+
+    // Delete
+    const delRes = await request(app).delete(`/api/research/sources/${sourceId}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.success).toBe(true);
+  });
+
+  it('PATCH and DELETE /api/research/candidates/:id updates and removes candidate', async () => {
+    const candRes = await request(app)
+      .post('/api/research/candidates')
+      .send({
+        title: 'Archival test candidate topic',
+        sourceUrl: 'https://example.com/archival-test',
+        excerpt: 'Some interesting finding',
+      });
+
+    const candId = candRes.body._id;
+
+    // Update status to archived
+    const patchRes = await request(app)
+      .patch(`/api/research/candidates/${candId}`)
+      .send({ status: 'archived', topicPillar: 'Startups' });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.status).toBe('archived');
+    expect(patchRes.body.topicPillar).toBe('Startups');
+
+    // Delete
+    const delRes = await request(app).delete(`/api/research/candidates/${candId}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.success).toBe(true);
+  });
 });
