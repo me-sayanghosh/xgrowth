@@ -46,6 +46,7 @@ export async function runDatabaseSeed(mongoUri?: string): Promise<void> {
     ],
     preferredWindows: ['09:00', '13:00', '19:00'],
     maxPostsPerDay: 3,
+    language: 'en',
     aiProvider: 'gemini',
     aiModel: 'gemini-2.5-flash',
   });

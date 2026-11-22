@@ -10,6 +10,7 @@ export interface UserSettingsDocument extends Document {
   voiceAvoid: string[];
   preferredWindows: string[];
   maxPostsPerDay: number;
+  language: 'en' | 'bn' | 'mixed';
   aiProvider: string;
   aiModel: string;
   createdAt: Date;
@@ -31,6 +32,11 @@ const UserSettingsSchema = new Schema<UserSettingsDocument>(
     voiceAvoid: { type: [String], default: [] },
     preferredWindows: { type: [String], default: ['09:00', '13:00', '19:00'] },
     maxPostsPerDay: { type: Number, default: 3 },
+    language: {
+      type: String,
+      enum: ['en', 'bn', 'mixed'],
+      default: 'en',
+    },
     aiProvider: { type: String, default: 'gemini' },
     aiModel: { type: String, default: 'gemini-2.5-flash' },
   },

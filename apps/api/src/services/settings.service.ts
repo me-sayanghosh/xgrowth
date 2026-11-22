@@ -35,6 +35,7 @@ export class SettingsService {
       voiceAvoid: yamlDefaults?.brand.voice.avoid ?? ['generic motivational posts', 'fake controversy', 'engagement bait'],
       preferredWindows: yamlDefaults?.publishing.preferred_windows ?? ['09:00', '13:00', '19:00'],
       maxPostsPerDay: yamlDefaults?.operation.max_posts_per_day ?? 3,
+      language: (yamlDefaults?.app.default_language as 'en' | 'bn' | 'mixed') ?? 'en',
       aiProvider: yamlDefaults?.ai.provider ?? 'gemini',
       aiModel: yamlDefaults?.ai.model ?? 'gemini-2.5-flash',
     });
