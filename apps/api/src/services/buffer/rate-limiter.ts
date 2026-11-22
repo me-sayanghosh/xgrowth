@@ -16,11 +16,35 @@ export class BufferQuotaTracker {
     return Math.max(0, this.monthlyLimit - this.usageCount);
   }
 
+  public static getUsageCount(): number {
+    return this.usageCount;
+  }
+
+  public static setUsageCount(count: number): void {
+    this.usageCount = count;
+  }
+
   public static isApproachingQuota(warningThreshold = 0.85): boolean {
     return this.usageCount >= this.monthlyLimit * warningThreshold;
   }
 
   public static shouldThrottleBackgroundJob(): boolean {
     return this.isApproachingQuota(0.9); // throttle at 90%
+  }
+
+  public static getQuotaStatus(): {
+    monthlyLimit: number;
+    usageCount: number;
+    remaining: number;
+    cycleResetDate: string;
+    isApproachingLimit: boolean;
+  } {
+    return {
+      monthlyLimit: this.monthlyLimit,
+      usageCount: this.usageCount,
+      remaining: this.getRemainingQuota(),
+      cycleResetDate: this.cycleResetDate.toISOString(),
+      isApproachingLimit: this.isApproachingQuota(),
+    };
   }
 }

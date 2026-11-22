@@ -3,6 +3,7 @@ import { ProviderSubmissionModel } from '../../db/models/provider-submission.mod
 import { BufferProvider } from './buffer-provider.interface.js';
 import { MockBufferProvider } from './mock-buffer.provider.js';
 import { SubmissionGatekeeper } from './submission-gatekeeper.js';
+import { BufferQuotaTracker } from './rate-limiter.js';
 import { ContentStatusEnum, AuditActionEnum } from '@xgrowth/shared';
 import { AuditService } from '../audit.service.js';
 
@@ -35,6 +36,10 @@ export class BufferSubmissionService {
     }
 
     // 1. Run Pre-submission Gatekeeper
+    if (BufferQuotaTracker.getRemainingQuota() <= 0) {
+      throw new Error('Buffer monthly quota exceeded (1,000 requests limit). Submissions blocked.');
+    }
+
     const gateCheck = await SubmissionGatekeeper.verify(item, options.channelId);
     if (!gateCheck.allowed || !gateCheck.idempotencyKey) {
       throw new Error(gateCheck.reason || 'Submission gate check failed.');
@@ -56,6 +61,7 @@ export class BufferSubmissionService {
     });
 
     // 3. Dispatch to Buffer Provider
+    BufferQuotaTracker.recordApiCall();
     const result = await this.provider.submitPost({
       channelId: options.channelId,
       text: item.text,
