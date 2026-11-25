@@ -1,6 +1,10 @@
 import { ScheduledJobModel } from '../../db/models/scheduled-job.model.js';
 import { ScheduledJobType, ScheduledJobTypeEnum } from '@xgrowth/shared';
 import { logger } from '../../middlewares/logger.js';
+import { matchesCron } from './cron-evaluator.js';
+import { runResearchSyncTask } from './tasks/research-sync.task.js';
+import { runBufferReconciliationTask } from './tasks/buffer-sync.task.js';
+import { runWeeklyReportTask } from './tasks/weekly-report.task.js';
 
 export type JobHandler = () => Promise<string | void>;
 
@@ -10,6 +14,12 @@ export class SchedulerService {
 
   public static registerHandler(type: ScheduledJobType, handler: JobHandler): void {
     this.handlers.set(type, handler);
+  }
+
+  public static registerDefaultHandlers(): void {
+    this.registerHandler(ScheduledJobTypeEnum.RESEARCH_SYNC, runResearchSyncTask);
+    this.registerHandler(ScheduledJobTypeEnum.STATUS_RECONCILIATION, runBufferReconciliationTask);
+    this.registerHandler(ScheduledJobTypeEnum.ANALYTICS_IMPORT, runWeeklyReportTask);
   }
 
   public static async initializeJobs(): Promise<void> {
@@ -113,10 +123,41 @@ export class SchedulerService {
     }
   }
 
+  public static async evaluateAndRunDueJobs(now: Date = new Date()): Promise<string[]> {
+    const enabledJobs = await ScheduledJobModel.find({ enabled: true });
+    const triggeredTypes: string[] = [];
+
+    const currentMinuteKey = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}-${now.getUTCHours()}-${now.getUTCMinutes()}`;
+
+    for (const job of enabledJobs) {
+      if (!matchesCron(job.cronExpression, now)) {
+        continue;
+      }
+
+      if (job.lastRunAt) {
+        const last = new Date(job.lastRunAt);
+        const lastKey = `${last.getUTCFullYear()}-${last.getUTCMonth()}-${last.getUTCDate()}-${last.getUTCHours()}-${last.getUTCMinutes()}`;
+        if (lastKey === currentMinuteKey) {
+          continue; // Already ran in this minute
+        }
+      }
+
+      const ran = await this.executeJob(job.type, false);
+      if (ran) {
+        triggeredTypes.push(job.type);
+      }
+    }
+
+    return triggeredTypes;
+  }
+
   public static startPolling(intervalMs = 60000): void {
     if (this.intervalTimer) return;
+    this.registerDefaultHandlers();
     this.intervalTimer = setInterval(() => {
-      // In production, evaluate cron expressions against current time
+      void this.evaluateAndRunDueJobs().catch((err) => {
+        logger.error({ err }, 'Scheduler polling cycle failed');
+      });
     }, intervalMs);
   }
 

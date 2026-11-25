@@ -1,13 +1,10 @@
-import { ContentItemModel } from '../../../db/models/content-item.model.js';
-import { ContentStatusEnum } from '@xgrowth/shared';
+import { WeeklyReportGenerator } from '../../analytics/weekly-reporter.js';
 
 export async function runWeeklyReportTask(): Promise<string> {
-  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const published = await ContentItemModel.find({
-    status: ContentStatusEnum.PUBLISHED,
-    updatedAt: { $gte: oneWeekAgo },
-  });
+  const report = await WeeklyReportGenerator.generateReport(oneWeekAgo, now);
 
-  return `Weekly report generated. Analyzed ${published.length} posts published in the last 7 days.`;
+  return `Weekly report ${report.id} generated. Analyzed ${report.totalPublished} posts in the last 7 days.`;
 }
