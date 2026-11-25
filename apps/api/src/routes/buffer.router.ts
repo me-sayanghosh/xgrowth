@@ -24,6 +24,7 @@ bufferRouter.get('/channels', async (_req: Request, res: Response, next: NextFun
 
 bufferRouter.get('/quota', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    await BufferQuotaTracker.syncFromDatabase();
     const quota = BufferQuotaTracker.getQuotaStatus();
     res.json(quota);
   } catch (error) {

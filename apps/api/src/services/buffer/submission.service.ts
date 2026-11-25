@@ -1,7 +1,7 @@
 import { ContentItemModel } from '../../db/models/content-item.model.js';
 import { ProviderSubmissionModel } from '../../db/models/provider-submission.model.js';
 import { BufferProvider } from './buffer-provider.interface.js';
-import { MockBufferProvider } from './mock-buffer.provider.js';
+import { createDefaultBufferProvider } from './buffer-provider.factory.js';
 import { SubmissionGatekeeper } from './submission-gatekeeper.js';
 import { BufferQuotaTracker } from './rate-limiter.js';
 import { ContentStatusEnum, AuditActionEnum } from '@xgrowth/shared';
@@ -22,7 +22,7 @@ export class BufferSubmissionService {
     if (provider) {
       this.provider = provider;
     } else {
-      this.provider = new MockBufferProvider(); // In dev/test defaults to safe mock unless explicit
+      this.provider = createDefaultBufferProvider();
     }
   }
 
@@ -80,7 +80,15 @@ export class BufferSubmissionService {
       await submissionRecord.save();
 
       // Transition ContentItem
-      item.status = ContentStatusEnum.SUBMITTED_TO_BUFFER;
+      item.status =
+        postResponse.providerStatus === 'published'
+          ? ContentStatusEnum.PUBLISHED
+          : ContentStatusEnum.SUBMITTED_TO_BUFFER;
+      if (postResponse.scheduledAt) {
+        item.scheduledFor = new Date(postResponse.scheduledAt);
+      } else if (options.dueAt) {
+        item.scheduledFor = new Date(options.dueAt);
+      }
       item.buffer = {
         channelId: options.channelId,
         submissionId: postResponse.id,

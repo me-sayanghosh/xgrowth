@@ -1,3 +1,5 @@
+import { ProviderSubmissionModel } from '../../db/models/provider-submission.model.js';
+
 export class BufferQuotaTracker {
   private static monthlyLimit = 1000;
   private static usageCount = 0;
@@ -10,6 +12,17 @@ export class BufferQuotaTracker {
       this.cycleResetDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     }
     this.usageCount++;
+  }
+
+  public static async syncFromDatabase(): Promise<number> {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const persistedCount = await ProviderSubmissionModel.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo },
+    });
+    if (persistedCount > this.usageCount) {
+      this.usageCount = persistedCount;
+    }
+    return this.usageCount;
   }
 
   public static getRemainingQuota(): number {
