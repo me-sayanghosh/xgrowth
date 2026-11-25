@@ -12,10 +12,14 @@ import {
   Square,
   CheckCircle2,
   XCircle,
+  Send,
+  RefreshCw,
 } from 'lucide-react';
 import { ApprovalModal } from '../components/content/ApprovalModal.js';
+import { SubmitToBufferModal } from '../components/content/SubmitToBufferModal.js';
 import { XPostPreview } from '../components/content/XPostPreview.js';
 import { ThreadVisualizer } from '../components/content/ThreadVisualizer.js';
+import { useApp } from '../context/AppContext.js';
 
 interface ContentItem {
   _id: string;
@@ -27,9 +31,15 @@ interface ContentItem {
   qualityFlags?: string[];
   riskFlags?: string[];
   contentHash?: string;
+  scheduledFor?: string;
+  buffer?: {
+    channelId?: string;
+    submissionId?: string;
+    providerStatus?: string;
+  };
 }
 
-type StatusFilter = 'needs_review' | 'approved' | 'rejected' | 'all';
+type StatusFilter = 'needs_review' | 'approved' | 'submitted_to_buffer' | 'unknown' | 'rejected' | 'all';
 type ViewMode = 'editor' | 'preview';
 
 const BANNED_BUZZWORDS = [
@@ -53,12 +63,15 @@ const ENGAGEMENT_BAIT_PHRASES = [
 ];
 
 export function ReviewQueueView() {
+  const { apiFetch } = useApp();
   const [items, setItems] = useState<ContentItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
   const [editedText, setEditedText] = useState('');
   const [editedThreadParts, setEditedThreadParts] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showBufferModal, setShowBufferModal] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('needs_review');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -222,8 +235,8 @@ export function ReviewQueueView() {
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center space-x-1 p-1 bg-slate-900 border border-slate-800 rounded-xl">
-          {(['needs_review', 'approved', 'rejected', 'all'] as StatusFilter[]).map((tab) => (
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl">
+          {(['needs_review', 'approved', 'submitted_to_buffer', 'unknown', 'rejected', 'all'] as StatusFilter[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
@@ -494,13 +507,42 @@ export function ReviewQueueView() {
                   >
                     Save Changes
                   </button>
-                  {selectedItem.status !== 'approved' && (
+                  {selectedItem.status === 'needs_review' && (
                     <button
                       onClick={() => setShowApprovalModal(true)}
                       className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm"
                     >
                       <Check className="w-4 h-4" />
                       <span>Approve Draft</span>
+                    </button>
+                  )}
+                  {selectedItem.status === 'approved' && (
+                    <button
+                      onClick={() => setShowBufferModal(true)}
+                      className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>Submit to Buffer</span>
+                    </button>
+                  )}
+                  {(selectedItem.status === 'submitted_to_buffer' ||
+                    selectedItem.status === 'unknown' ||
+                    selectedItem.status === 'queued') && (
+                    <button
+                      onClick={async () => {
+                        setReconciling(true);
+                        try {
+                          await apiFetch(`/api/buffer/reconcile/${selectedItem._id}`, { method: 'POST' });
+                          fetchItems();
+                        } finally {
+                          setReconciling(false);
+                        }
+                      }}
+                      disabled={reconciling}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${reconciling ? 'animate-spin' : ''}`} />
+                      <span>{reconciling ? 'Reconciling...' : 'Reconcile Buffer Status'}</span>
                     </button>
                   )}
                 </div>
@@ -520,6 +562,18 @@ export function ReviewQueueView() {
           onClose={() => setShowApprovalModal(false)}
           onApproved={() => {
             setShowApprovalModal(false);
+            setSelectedItem(null);
+            fetchItems();
+          }}
+        />
+      )}
+
+      {showBufferModal && selectedItem && (
+        <SubmitToBufferModal
+          item={{ ...selectedItem, text: editedText }}
+          onClose={() => setShowBufferModal(false)}
+          onSubmitted={() => {
+            setShowBufferModal(false);
             setSelectedItem(null);
             fetchItems();
           }}
