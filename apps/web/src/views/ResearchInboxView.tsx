@@ -33,7 +33,7 @@ interface ResearchSource {
   url: string;
   category: string;
   type: string;
-  isActive: boolean;
+  enabled: boolean;
   lastFetchedAt?: string;
   fetchErrorCount?: number;
 }
@@ -144,11 +144,11 @@ export function ResearchInboxView() {
           'Content-Type': 'application/json',
           'x-xgrowth-csrf': '1',
         },
-        body: JSON.stringify({ isActive: !currentActive }),
+        body: JSON.stringify({ enabled: !currentActive }),
       });
       if (res.ok) {
         setSources((prev) =>
-          prev.map((s) => (s._id === id ? { ...s, isActive: !currentActive } : s)),
+          prev.map((s) => (s._id === id ? { ...s, enabled: !currentActive } : s)),
         );
       }
     } catch {
@@ -427,14 +427,14 @@ export function ResearchInboxView() {
 
                         <div className="flex items-center space-x-2 shrink-0">
                           <button
-                            onClick={() => handleToggleSource(s._id, s.isActive)}
+                            onClick={() => handleToggleSource(s._id, s.enabled)}
                             className={`px-2 py-1 text-xs rounded font-medium transition ${
-                              s.isActive
+                              s.enabled
                                 ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
                                 : 'bg-slate-800 text-slate-400'
                             }`}
                           >
-                            {s.isActive ? 'Active' : 'Disabled'}
+                            {s.enabled ? 'Active' : 'Disabled'}
                           </button>
                           <button
                             onClick={() => handleSyncSource(s._id)}
