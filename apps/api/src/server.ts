@@ -1,5 +1,7 @@
 import express, { Express } from 'express';
 import http from 'http';
+import cors from 'cors';
+import helmet from 'helmet';
 import { getEnv } from '@xgrowth/config';
 import { dbConnection } from './db/connection.js';
 import { correlationMiddleware } from './middlewares/correlation.js';
@@ -15,6 +17,9 @@ import { calendarRouter } from './routes/calendar.router.js';
 import { bufferRouter } from './routes/buffer.router.js';
 import { analyticsRouter } from './routes/analytics.router.js';
 import { jobsRouter } from './routes/jobs.router.js';
+import { SchedulerService } from './services/scheduler/scheduler.service.js';
+import { SettingsService } from './services/settings.service.js';
+import { BufferQuotaTracker } from './services/buffer/rate-limiter.js';
 
 export class AppServer {
   public app: Express;
@@ -28,6 +33,16 @@ export class AppServer {
   }
 
   private configureBaseMiddlewares(): void {
+    const env = getEnv();
+    const allowedOrigin = process.env.CORS_ORIGIN || env.APP_URL;
+
+    this.app.use(helmet());
+    this.app.use(
+      cors({
+        origin: allowedOrigin,
+        credentials: true,
+      }),
+    );
     this.app.use(express.json({ limit: '1mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
     this.app.use(correlationMiddleware);
@@ -54,6 +69,13 @@ export class AppServer {
   public async start(): Promise<http.Server> {
     const env = getEnv();
     await dbConnection.connect({ uri: env.MONGODB_URI });
+    await SettingsService.getSettings();
+    await BufferQuotaTracker.syncFromDatabase();
+
+    if (env.NODE_ENV !== 'test') {
+      await SchedulerService.initializeJobs();
+      SchedulerService.startPolling(60000);
+    }
 
     return new Promise((resolve) => {
       this.server = this.app.listen(env.PORT, () => {
@@ -64,6 +86,7 @@ export class AppServer {
   }
 
   public async stop(): Promise<void> {
+    SchedulerService.stopPolling();
     if (this.server) {
       await new Promise<void>((resolve, reject) => {
         this.server!.close((err) => {
