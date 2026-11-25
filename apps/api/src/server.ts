@@ -1,12 +1,11 @@
 import express, { Express } from 'express';
 import http from 'http';
-import cors from 'cors';
-import helmet from 'helmet';
 import { getEnv } from '@xgrowth/config';
 import { dbConnection } from './db/connection.js';
 import { correlationMiddleware } from './middlewares/correlation.js';
 import { requestLogger } from './middlewares/logger.js';
 import { errorHandler } from './middlewares/error-handler.js';
+import { configureSecurityMiddlewares } from './middlewares/security.js';
 import { healthRouter } from './routes/health.router.js';
 import { settingsRouter } from './routes/settings.router.js';
 import { auditRouter } from './routes/audit.router.js';
@@ -33,16 +32,9 @@ export class AppServer {
   }
 
   private configureBaseMiddlewares(): void {
-    const env = getEnv();
-    const allowedOrigin = process.env.CORS_ORIGIN || env.APP_URL;
-
-    this.app.use(helmet());
-    this.app.use(
-      cors({
-        origin: allowedOrigin,
-        credentials: true,
-      }),
-    );
+    for (const mw of configureSecurityMiddlewares()) {
+      this.app.use(mw);
+    }
     this.app.use(express.json({ limit: '1mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
     this.app.use(correlationMiddleware);
