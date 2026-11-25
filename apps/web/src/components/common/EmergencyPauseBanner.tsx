@@ -3,17 +3,16 @@ import { useApp } from '../../context/AppContext.js';
 import { AlertTriangle, Play, Pause } from 'lucide-react';
 
 export function EmergencyPauseBanner() {
-  const { globalPause, setGlobalPause } = useApp();
+  const { globalPause, setGlobalPause, apiFetch } = useApp();
   const [loading, setLoading] = useState(false);
 
   const togglePause = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/settings/emergency-pause', {
+      const res = await apiFetch('/api/settings/emergency-pause', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({ paused: !globalPause }),
       });

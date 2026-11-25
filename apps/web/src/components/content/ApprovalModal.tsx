@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Check, X, ShieldCheck, Hash } from 'lucide-react';
+import { useApp } from '../../context/AppContext.js';
 
 interface ApprovalModalProps {
   item: {
@@ -14,12 +15,13 @@ interface ApprovalModalProps {
 }
 
 export function ApprovalModal({ item, onClose, onApproved }: ApprovalModalProps) {
+  const { apiFetch } = useApp();
   const [channels, setChannels] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedChannel, setSelectedChannel] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch('/api/buffer/channels')
+    apiFetch('/api/buffer/channels')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -28,14 +30,14 @@ export function ApprovalModal({ item, onClose, onApproved }: ApprovalModalProps)
         }
       })
       .catch(() => {});
-  }, []);
+  }, [apiFetch]);
 
   const handleApprove = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/content/items/${item._id}/approve`, {
+      const res = await apiFetch(`/api/content/items/${item._id}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-xgrowth-csrf': '1' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channelId: selectedChannel }),
       });
       const data = await res.json();

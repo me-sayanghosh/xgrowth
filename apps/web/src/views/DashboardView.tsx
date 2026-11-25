@@ -4,29 +4,33 @@ import { useApp } from '../context/AppContext.js';
 import { CheckCircle2, Clock, FileText, Send, Sparkles } from 'lucide-react';
 
 export function DashboardView() {
-  const { setActiveView } = useApp();
+  const { setActiveView, apiFetch } = useApp();
   const [stats, setStats] = useState({
-    reviewCount: 3,
-    approvedCount: 2,
-    submittedCount: 8,
-    candidateCount: 14,
+    reviewCount: 0,
+    approvedCount: 0,
+    submittedCount: 0,
+    candidateCount: 0,
   });
 
   useEffect(() => {
-    fetch('/api/content/items')
-      .then((res) => res.json())
-      .then((items) => {
-        if (Array.isArray(items)) {
-          setStats({
-            reviewCount: items.filter((i) => i.status === 'needs_review').length,
-            approvedCount: items.filter((i) => i.status === 'approved').length,
-            submittedCount: items.filter((i) => i.status === 'submitted_to_buffer' || i.status === 'queued').length,
-            candidateCount: 14,
-          });
-        }
+    Promise.all([
+      apiFetch('/api/content/items').then((res) => res.json()).catch(() => []),
+      apiFetch('/api/research/candidates').then((res) => res.json()).catch(() => []),
+    ])
+      .then(([items, candidates]) => {
+        const itemList = Array.isArray(items) ? items : [];
+        const candList = Array.isArray(candidates) ? candidates : [];
+        setStats({
+          reviewCount: itemList.filter((i) => i.status === 'needs_review').length,
+          approvedCount: itemList.filter((i) => i.status === 'approved').length,
+          submittedCount: itemList.filter(
+            (i) => i.status === 'submitted_to_buffer' || i.status === 'queued' || i.status === 'published',
+          ).length,
+          candidateCount: candList.length,
+        });
       })
       .catch(() => {});
-  }, []);
+  }, [apiFetch]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">

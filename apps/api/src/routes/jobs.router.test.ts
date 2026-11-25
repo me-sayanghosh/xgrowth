@@ -36,7 +36,7 @@ describe('Jobs Router Integration Test', () => {
     const res = await request(app).get('/api/jobs');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBe(3);
+    expect(res.body.length).toBe(4);
   });
 
   it('POST /api/jobs/:id/trigger executes the job on-demand', async () => {

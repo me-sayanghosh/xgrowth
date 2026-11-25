@@ -13,6 +13,7 @@ const updateSettingsSchema = z.object({
   voiceAvoid: z.array(z.string()).optional(),
   preferredWindows: z.array(z.string()).optional(),
   maxPostsPerDay: z.number().int().positive().optional(),
+  language: z.enum(['en', 'bn', 'mixed']).optional(),
   aiProvider: z.string().optional(),
   aiModel: z.string().optional(),
 });
