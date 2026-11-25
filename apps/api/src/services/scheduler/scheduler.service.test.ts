@@ -21,12 +21,12 @@ describe('SchedulerService', () => {
   it('initializes default jobs idempotently', async () => {
     await SchedulerService.initializeJobs();
     const count = await ScheduledJobModel.countDocuments();
-    expect(count).toBe(3);
+    expect(count).toBe(4);
 
     // Re-run initialization to confirm idempotency
     await SchedulerService.initializeJobs();
     const count2 = await ScheduledJobModel.countDocuments();
-    expect(count2).toBe(3);
+    expect(count2).toBe(4);
   });
 
   it('executes a registered job successfully and logs duration', async () => {

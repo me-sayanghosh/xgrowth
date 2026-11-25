@@ -5,6 +5,7 @@ import { matchesCron } from './cron-evaluator.js';
 import { runResearchSyncTask } from './tasks/research-sync.task.js';
 import { runBufferReconciliationTask } from './tasks/buffer-sync.task.js';
 import { runWeeklyReportTask } from './tasks/weekly-report.task.js';
+import { runAutoPublishTask } from './tasks/auto-publish.task.js';
 
 export type JobHandler = () => Promise<string | void>;
 
@@ -20,6 +21,7 @@ export class SchedulerService {
     this.registerHandler(ScheduledJobTypeEnum.RESEARCH_SYNC, runResearchSyncTask);
     this.registerHandler(ScheduledJobTypeEnum.STATUS_RECONCILIATION, runBufferReconciliationTask);
     this.registerHandler(ScheduledJobTypeEnum.ANALYTICS_IMPORT, runWeeklyReportTask);
+    this.registerHandler(ScheduledJobTypeEnum.AUTO_PUBLISH, runAutoPublishTask);
   }
 
   public static async initializeJobs(): Promise<void> {
@@ -38,6 +40,11 @@ export class SchedulerService {
         name: 'Weekly Performance Report Generator',
         type: ScheduledJobTypeEnum.ANALYTICS_IMPORT,
         cronExpression: '0 10 * * 1', // Mondays at 10:00
+      },
+      {
+        name: 'Scheduled Auto-Publisher',
+        type: ScheduledJobTypeEnum.AUTO_PUBLISH,
+        cronExpression: '*/5 * * * *', // every 5 minutes
       },
     ];
 

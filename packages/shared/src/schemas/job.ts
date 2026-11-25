@@ -4,6 +4,7 @@ export const ScheduledJobTypeEnum = {
   RESEARCH_SYNC: 'RESEARCH_SYNC',
   STATUS_RECONCILIATION: 'STATUS_RECONCILIATION',
   ANALYTICS_IMPORT: 'ANALYTICS_IMPORT',
+  AUTO_PUBLISH: 'AUTO_PUBLISH',
 } as const;
 
 export type ScheduledJobType = (typeof ScheduledJobTypeEnum)[keyof typeof ScheduledJobTypeEnum];
@@ -25,6 +26,7 @@ export const scheduledJobSchema = z.object({
     ScheduledJobTypeEnum.RESEARCH_SYNC,
     ScheduledJobTypeEnum.STATUS_RECONCILIATION,
     ScheduledJobTypeEnum.ANALYTICS_IMPORT,
+    ScheduledJobTypeEnum.AUTO_PUBLISH,
   ]),
   cronExpression: z.string(),
   enabled: z.boolean().default(true),
