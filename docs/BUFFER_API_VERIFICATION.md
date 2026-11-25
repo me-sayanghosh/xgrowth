@@ -1,7 +1,7 @@
 # Buffer API Verification Notes
 
-**Checked:** 2026-11-21  
-**Scope:** Single-owner personal-brand automation using Buffer to publish to one connected X account. Re-check before production because APIs and plan limits can change.
+**Checked:** 2026-11-26  
+**Scope:** Single-owner personal-brand automation using Buffer GraphQL API (`BufferGraphQLProvider`) to publish single posts and X threads to a connected X account. Re-check before production because APIs and plan limits can change.
 
 ## Confirmed from current official documentation
 

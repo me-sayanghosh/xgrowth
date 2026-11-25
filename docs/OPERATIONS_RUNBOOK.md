@@ -68,12 +68,12 @@ Healthchecks verify:
   curl -H "Authorization: Bearer $APP_SESSION_SECRET" http://localhost:3000/api/settings
   
   # Activate Emergency Pause
-  curl -X POST -H "Authorization: Bearer $APP_SESSION_SECRET" -H "Content-Type: application/json" \
-    -d '{"globalPause": true}' http://localhost:3000/api/settings/pause
+  curl -X POST -H "Authorization: Bearer $APP_SESSION_SECRET" -H "x-xgrowth-csrf: 1" -H "Content-Type: application/json" \
+    -d '{"paused": true}' http://localhost:3000/api/settings/emergency-pause
   
   # Deactivate Emergency Pause (Resume Publishing)
-  curl -X POST -H "Authorization: Bearer $APP_SESSION_SECRET" -H "Content-Type: application/json" \
-    -d '{"globalPause": false}' http://localhost:3000/api/settings/pause
+  curl -X POST -H "Authorization: Bearer $APP_SESSION_SECRET" -H "x-xgrowth-csrf: 1" -H "Content-Type: application/json" \
+    -d '{"paused": false}' http://localhost:3000/api/settings/emergency-pause
   ```
 - **Via Antigravity MCP Tool**:
   ```json
@@ -150,7 +150,9 @@ Defined in `.agents/mcp_config.json`:
 | Requirement & Feature Domain | Verified By | Test Suites / Commands | Status |
 |:---|:---|:---|:---:|
 | Monorepo & TypeScript Strict Mode | `npm run typecheck` | `tsc --build` | ✅ PASS (0 errors) |
-| Complete Monorepo Test Suite | `npm test` | 38 test files, 111 tests | ✅ PASS (100%) |
+| Complete Monorepo Test Suite | `npm test` | 40 test files, 121 tests | ✅ PASS (100%) |
+| Buffer GraphQL Provider & Threads | `buffer-graphql.provider.test.ts` | Unit tests (mocked GraphQL) | ✅ PASS |
+| Scheduler Cron & Auto-Publisher | `auto-publisher.test.ts` | Unit & Integration | ✅ PASS |
 | Single-Owner Session & Cookie Fallback | `auth.test.ts` | Unit tests | ✅ PASS |
 | SafeFetcher Anti-SSRF Protection | `safe-fetcher.test.ts` | Unit tests | ✅ PASS |
 | OPML 2.0 Import/Export & Anti-SSRF | `opml.test.ts` | Unit tests | ✅ PASS |
