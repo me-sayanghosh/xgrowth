@@ -123,16 +123,24 @@ Defined in `.agents/mcp_config.json`:
 }
 ```
 
-### Registered Tools (9)
+### Registered Tools (17)
 1. `xgrowth_get_status`: Operational status and pause state.
 2. `xgrowth_toggle_emergency_pause`: Toggle emergency pause.
 3. `xgrowth_research_topics`: Fetch discovered technical candidate topics.
-4. `xgrowth_generate_draft`: Generate 2-3 technical draft variants via Gemini.
+4. `xgrowth_generate_draft`: Generate technical draft variants (`single_post`, `educational_tip`, `build_in_public`, `opinion_with_reasoning`, `thread_draft`).
 5. `xgrowth_list_drafts`: List drafts by status.
 6. `xgrowth_approve_draft`: Cryptographically approve draft snapshot.
 7. `xgrowth_submit_to_buffer`: Submit approved post through the 4-gate safety filter.
-8. `xgrowth_reconcile_status`: Reconcile quarantined items in `unknown` state.
+8. `xgrowth_reconcile_status`: Reconcile quarantined items in `unknown` state (including channel history scan when `providerPostId` is missing).
 9. `xgrowth_get_weekly_report`: Fetch weekly Markdown analytics summary.
+10. `xgrowth_list_channels`: Discover connected Buffer X channels and check API quota.
+11. `xgrowth_run_daily_pipeline`: Execute the autonomous Twitter agent research-to-draft pipeline.
+12. `xgrowth_generate_hooks`: Generate non-clickbait opening hooks.
+13. `xgrowth_suggest_ctas`: Suggest technical discussion CTAs.
+14. `xgrowth_edit_draft`: Edit draft text or threadParts (invalidates prior approval).
+15. `xgrowth_reject_draft`: Reject draft with audit reason.
+16. `xgrowth_get_calendar`: Inspect upcoming publishing slots and conflicts.
+17. `xgrowth_schedule_post`: Assign an approved post to a target UTC slot.
 
 ### Registered Resources (3)
 1. `xgrowth://status`: Live JSON system status and channel connection state.
@@ -150,7 +158,8 @@ Defined in `.agents/mcp_config.json`:
 | Requirement & Feature Domain | Verified By | Test Suites / Commands | Status |
 |:---|:---|:---|:---:|
 | Monorepo & TypeScript Strict Mode | `npm run typecheck` | `tsc --build` | ✅ PASS (0 errors) |
-| Complete Monorepo Test Suite | `npm test` | 40 test files, 121 tests | ✅ PASS (100%) |
+| Complete Monorepo Test Suite | `npm test` | 41 test files, 130 tests | ✅ PASS (100%) |
+| Twitter Agent Daily Pipeline | `twitter-agent.service.test.ts` | Integration tests | ✅ PASS |
 | Buffer GraphQL Provider & Threads | `buffer-graphql.provider.test.ts` | Unit tests (mocked GraphQL) | ✅ PASS |
 | Scheduler Cron & Auto-Publisher | `auto-publisher.test.ts` | Unit & Integration | ✅ PASS |
 | Single-Owner Session & Cookie Fallback | `auth.test.ts` | Unit tests | ✅ PASS |

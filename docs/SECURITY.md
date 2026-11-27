@@ -7,12 +7,16 @@
 - Never log access tokens, refresh tokens, cookies, or authorization headers.
 - Rotate credentials if exposed.
 
-## Authentication
-- Protect the dashboard behind owner authentication.
-- Use secure, HttpOnly, SameSite cookies if using cookie sessions.
-- Add CSRF defenses for cookie-authenticated write requests.
-- Use restrictive CORS and security headers.
-- Rate-limit login and sensitive endpoints.
+## Authentication & Rate Limiting
+- Protect the dashboard behind single-owner authentication (`singleOwnerAuthMiddleware` using constant-time SHA-256 `crypto.timingSafeEqual` verification).
+- Never accept development fallback tokens (`dev-owner-token`) when `NODE_ENV === 'production'`.
+- Enforce `x-xgrowth-csrf: 1` CSRF defense for state-modifying requests (`POST`, `PATCH`, `PUT`, `DELETE`).
+- Enforce Helmet CSP, restrictive CORS (`configureSecurityMiddlewares`), global API rate limiting (`globalRateLimiter`), and strict mutation rate limiting (`mutationRateLimiter`).
+
+## SSRF, Prompt Injection & Error Hardening
+- `SafeFetcher` validates URLs and resolved DNS A/AAAA addresses (`dns.lookup`) to block IPv4/IPv6 loopback, RFC 1918 private subnets, cloud metadata (`169.254.169.254`), `.local`/`.internal` hostnames, alternate IP encodings (hex/octal/integer), embedded URL credentials, unsafe HTTP redirects (`redirect: 'manual'`), and responses > 2 MB.
+- `GeminiAIAdapter`, `HookGeneratorService`, and `CtaRecommenderService` pass keys via `x-goog-api-key` headers (never query URLs), enforce `AbortController` timeouts, and isolate untrusted external research content inside `<untrusted_source_data>` delimiters.
+- `errorHandler` maps Mongoose `CastError` to HTTP `400 INVALID_ID` and sanitizes `?key=` and `Bearer ...` tokens before logging or returning responses.
 
 ## Token storage
 - Encrypt provider tokens at rest using a key stored separately from the database.
