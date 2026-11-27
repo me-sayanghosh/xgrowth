@@ -128,4 +128,29 @@ describe('Research Desk API Integration Test', () => {
     expect(delRes.status).toBe(200);
     expect(delRes.body.success).toBe(true);
   });
+
+  it('POST /api/research/sources/opml/import accepts opmlText payload and returns count', async () => {
+    const res = await request(app)
+      .post('/api/research/sources/opml/import')
+      .send({
+        opmlText: `<?xml version="1.0"?><opml version="2.0"><body><outline text="Kubernetes Blog" xmlUrl="https://kubernetes.io/feed.xml" category="Cloud Infrastructure" /></body></opml>`,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.count).toBe(1);
+    expect(res.body.importedCount).toBe(1);
+  });
+
+  it('POST /api/research/candidates blocks internal SSRF URLs', async () => {
+    const res = await request(app)
+      .post('/api/research/candidates')
+      .send({
+        title: 'Internal SSRF Test',
+        sourceUrl: 'http://169.254.169.254/latest/meta-data/',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('INVALID_URL');
+  });
 });

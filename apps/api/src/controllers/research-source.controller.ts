@@ -96,6 +96,62 @@ export class ResearchSourceController {
     }
   }
 
+  public static async syncSourceDocument(
+    source: {
+      name: string;
+      url: string;
+      category: string;
+      credibilityScore?: number;
+      lastFetchedAt?: Date;
+      save: () => Promise<unknown>;
+    },
+    brandPillars: string[],
+  ): Promise<number> {
+    const items = await feedParserService.parseFeedUrl(source.url);
+    let discoveredCount = 0;
+
+    for (const item of items) {
+      const normUrl = TopicDeduplicator.normalizeUrl(item.link);
+      const existing = await TopicModel.findOne({ sourceUrl: normUrl });
+      if (existing) continue;
+
+      const freshness = ResearchEvaluator.calculateFreshness(item.pubDate);
+      const credibility = source.credibilityScore || 4;
+      const relevance = ResearchEvaluator.calculateRelevance(
+        item.title,
+        item.contentSnippet || '',
+        brandPillars,
+      );
+
+      if (relevance < 2) continue;
+
+      const topicPillar = ResearchEvaluator.inferBestPillar(
+        item.title,
+        item.contentSnippet || '',
+        source.category,
+        brandPillars,
+      );
+
+      await TopicModel.create({
+        title: item.title,
+        sourceUrl: normUrl,
+        sourceName: source.name,
+        excerpt: item.contentSnippet || '',
+        topicPillar,
+        freshnessScore: freshness,
+        credibilityScore: credibility,
+        relevanceScore: relevance,
+        publishedAt: item.pubDate ? new Date(item.pubDate) : undefined,
+      });
+
+      discoveredCount++;
+    }
+
+    source.lastFetchedAt = new Date();
+    await source.save();
+    return discoveredCount;
+  }
+
   public static async syncSource(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const source = await ResearchSourceModel.findById(req.params.id);
@@ -105,41 +161,10 @@ export class ResearchSourceController {
       }
 
       const settings = await SettingsService.getSettings();
-      const items = await feedParserService.parseFeedUrl(source.url);
-      let discoveredCount = 0;
-
-      for (const item of items) {
-        const normUrl = TopicDeduplicator.normalizeUrl(item.link);
-        const existing = await TopicModel.findOne({ sourceUrl: normUrl });
-        if (existing) continue;
-
-        const freshness = ResearchEvaluator.calculateFreshness(item.pubDate);
-        const credibility = source.credibilityScore || 4;
-        const relevance = ResearchEvaluator.calculateRelevance(
-          item.title,
-          item.contentSnippet || '',
-          settings.brandPillars,
-        );
-
-        if (relevance < 2) continue;
-
-        await TopicModel.create({
-          title: item.title,
-          sourceUrl: normUrl,
-          sourceName: source.name,
-          excerpt: item.contentSnippet || '',
-          topicPillar: settings.brandPillars[0] || 'General',
-          freshnessScore: freshness,
-          credibilityScore: credibility,
-          relevanceScore: relevance,
-          publishedAt: item.pubDate ? new Date(item.pubDate) : undefined,
-        });
-
-        discoveredCount++;
-      }
-
-      source.lastFetchedAt = new Date();
-      await source.save();
+      const discoveredCount = await ResearchSourceController.syncSourceDocument(
+        source,
+        settings.brandPillars,
+      );
 
       res.json({
         success: true,

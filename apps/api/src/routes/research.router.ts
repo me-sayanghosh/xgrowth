@@ -29,9 +29,12 @@ researchRouter.get('/sources/opml/export', async (_req: Request, res: Response, 
   }
 });
 
-researchRouter.post('/sources/opml/import', csrfProtection, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+researchRouter.post('/sources/opml/import', csrfProtection, mutationRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const xml = typeof req.body === 'string' ? req.body : req.body.opml;
+    const xml =
+      typeof req.body === 'string'
+        ? req.body
+        : req.body?.opmlText || req.body?.opml;
     if (!xml || typeof xml !== 'string') {
       res.status(400).json({ error: 'INVALID_PAYLOAD', message: 'Missing opml content in request body.' });
       return;
@@ -57,6 +60,7 @@ researchRouter.post('/sources/opml/import', csrfProtection, async (req: Request,
 
     res.status(201).json({
       success: true,
+      count: created.length,
       importedCount: created.length,
       sources: created,
     });

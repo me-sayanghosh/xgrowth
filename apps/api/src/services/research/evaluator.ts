@@ -65,4 +65,31 @@ export class ResearchEvaluator {
     if (matches >= 1) return 3;
     return 2;
   }
+
+  public static inferBestPillar(
+    title: string,
+    snippet: string,
+    sourceCategory: string,
+    pillars: string[],
+  ): string {
+    const text = `${title} ${snippet}`.toLowerCase();
+    let bestPillar = sourceCategory || pillars[0] || 'General';
+    let bestScore = 0;
+
+    for (const pillar of pillars) {
+      let score = 0;
+      const words = pillar.toLowerCase().split(/[\s,]+/);
+      for (const word of words) {
+        if (word.length > 2 && text.includes(word)) {
+          score++;
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestPillar = pillar;
+      }
+    }
+
+    return bestPillar;
+  }
 }
