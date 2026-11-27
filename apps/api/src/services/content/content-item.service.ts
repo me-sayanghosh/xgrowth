@@ -1,6 +1,8 @@
 import { ContentItemModel, ContentItemDocument } from '../../db/models/content-item.model.js';
 import { ContentStatusEnum, AuditActionEnum } from '@xgrowth/shared';
 import { AuditService } from '../audit.service.js';
+import { ToneLinter } from '../ai/tone-linter.js';
+import { CharacterValidator } from '../ai/character-validator.js';
 
 export interface UpdateContentItemInput {
   text?: string;
@@ -54,6 +56,29 @@ export class ContentItemService {
     if (updates.channelId !== undefined) {
       if (!item.buffer) item.buffer = {};
       item.buffer.channelId = updates.channelId;
+    }
+
+    // Re-evaluate lint and X character constraints when text or threadParts change
+    if (updates.text !== undefined || updates.threadParts !== undefined) {
+      const lint = ToneLinter.lintDraft(item.text, item.threadParts);
+      const riskFlags = [...lint.riskFlags];
+
+      if (item.format === 'thread_draft' && item.threadParts.length > 0) {
+        item.threadParts.forEach((part, idx) => {
+          const val = CharacterValidator.validate(part);
+          if (!val.isValid) {
+            riskFlags.push(`Thread part ${idx + 1} exceeds 280-char X platform limit (${val.charCount} chars)`);
+          }
+        });
+      } else {
+        const val = CharacterValidator.validate(item.text);
+        if (!val.isValid) {
+          riskFlags.push(`Exceeds 280-char X platform limit (${val.charCount} chars)`);
+        }
+      }
+
+      item.qualityFlags = lint.qualityFlags;
+      item.riskFlags = riskFlags;
     }
 
     await item.save();

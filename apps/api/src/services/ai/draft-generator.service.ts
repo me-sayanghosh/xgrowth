@@ -27,7 +27,11 @@ export class DraftGeneratorService {
       this.aiProvider = provider;
     } else {
       const env = getEnv();
-      this.aiProvider = env.GEMINI_API_KEY ? new GeminiAIAdapter() : new MockAIAdapter();
+      const hasRealKey =
+        Boolean(env.GEMINI_API_KEY) &&
+        env.GEMINI_API_KEY !== 'mock-gemini-api-key' &&
+        process.env.NODE_ENV !== 'test';
+      this.aiProvider = hasRealKey ? new GeminiAIAdapter() : new MockAIAdapter();
     }
   }
 
@@ -57,11 +61,20 @@ export class DraftGeneratorService {
 
     for (const variant of result.value) {
       const lint = ToneLinter.lintDraft(variant.text, variant.threadParts);
-      const charValidation = CharacterValidator.validate(variant.text);
-
       const riskFlags = [...lint.riskFlags];
-      if (!charValidation.isValid) {
-        riskFlags.push(`Exceeds 280-char X platform limit (${charValidation.charCount} chars)`);
+
+      if (variant.format === 'thread_draft' && variant.threadParts && variant.threadParts.length > 0) {
+        variant.threadParts.forEach((part, idx) => {
+          const partVal = CharacterValidator.validate(part);
+          if (!partVal.isValid) {
+            riskFlags.push(`Thread part ${idx + 1} exceeds 280-char X platform limit (${partVal.charCount} chars)`);
+          }
+        });
+      } else {
+        const charValidation = CharacterValidator.validate(variant.text);
+        if (!charValidation.isValid) {
+          riskFlags.push(`Exceeds 280-char X platform limit (${charValidation.charCount} chars)`);
+        }
       }
 
       const item = await ContentItemModel.create({

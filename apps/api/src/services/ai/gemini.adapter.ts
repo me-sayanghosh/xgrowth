@@ -19,7 +19,7 @@ export class GeminiAIAdapter implements AIProvider {
       });
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
     const systemPrompt = buildSystemPrompt({
       format: input.format,
@@ -38,10 +38,17 @@ export class GeminiAIAdapter implements AIProvider {
       language: input.language,
     });
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
           generationConfig: {
@@ -93,6 +100,8 @@ export class GeminiAIAdapter implements AIProvider {
         message: (error as Error).message,
         retryable: true,
       });
+    } finally {
+      clearTimeout(timeout);
     }
   }
 }
