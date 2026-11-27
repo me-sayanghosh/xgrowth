@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, RefreshCw, Search, Filter, AlertCircle, Download } from 'lucide-react';
+import { useApp } from '../context/AppContext.js';
 
 interface AuditEvent {
   id: string;
@@ -13,6 +14,7 @@ interface AuditEvent {
 }
 
 export function AuditLogView() {
+  const { apiFetch } = useApp();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionFilter, setActionFilter] = useState('');
@@ -25,7 +27,7 @@ export function AuditLogView() {
     try {
       const params = new URLSearchParams({ page: page.toString(), limit: '20' });
       if (actionFilter) params.append('action', actionFilter);
-      const res = await fetch(`/api/audit-logs?${params.toString()}`);
+      const res = await apiFetch(`/api/audit-logs?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setEvents(data.events || []);
@@ -54,11 +56,21 @@ export function AuditLogView() {
     );
   });
 
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
     const url = actionFilter
       ? `/api/audit-logs/export?action=${encodeURIComponent(actionFilter)}`
       : '/api/audit-logs/export';
-    window.location.href = url;
+    const res = await apiFetch(url);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const dlUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = dlUrl;
+    a.download = `xgrowth-audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(dlUrl);
   };
 
   const getActionBadgeColor = (action: string) => {

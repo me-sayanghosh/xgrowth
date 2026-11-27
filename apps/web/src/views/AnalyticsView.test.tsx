@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { AnalyticsView } from './AnalyticsView.js';
+import { AppProvider } from '../context/AppContext.js';
 
 describe('AnalyticsView Component Tests', () => {
   beforeEach(() => {
@@ -35,7 +36,11 @@ describe('AnalyticsView Component Tests', () => {
   });
 
   it('renders analytics shell and header controls without crashing', () => {
-    const html = renderToString(<AnalyticsView />);
+    const html = renderToString(
+      <AppProvider>
+        <AnalyticsView />
+      </AppProvider>,
+    );
     expect(html).toContain('Analytics &amp; Weekly Insights');
     expect(html).toContain('Generate New Weekly Report');
   });

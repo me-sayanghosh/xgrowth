@@ -81,7 +81,7 @@ export function ReviewQueueView() {
 
   const fetchItems = () => {
     const url = statusFilter === 'all' ? '/api/content/items' : `/api/content/items?status=${statusFilter}`;
-    fetch(url)
+    apiFetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -141,11 +141,10 @@ export function ReviewQueueView() {
     if (selectedIds.length === 0) return;
     setBatchLoading(true);
     try {
-      await fetch('/api/content/items/batch-approve', {
+      await apiFetch('/api/content/items/batch-approve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({ ids: selectedIds }),
       });
@@ -159,11 +158,10 @@ export function ReviewQueueView() {
     if (selectedIds.length === 0) return;
     setBatchLoading(true);
     try {
-      await fetch('/api/content/items/batch-reject', {
+      await apiFetch('/api/content/items/batch-reject', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({ ids: selectedIds, reason: 'Batch rejected from queue toolbar' }),
       });
@@ -179,9 +177,9 @@ export function ReviewQueueView() {
     if (selectedItem.format === 'thread_draft' || editedThreadParts.length > 0) {
       payload.threadParts = editedThreadParts;
     }
-    const res = await fetch(`/api/content/items/${selectedItem._id}`, {
+    const res = await apiFetch(`/api/content/items/${selectedItem._id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-xgrowth-csrf': '1' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const updated = await res.json();
@@ -191,9 +189,9 @@ export function ReviewQueueView() {
 
   const handleReject = async () => {
     if (!selectedItem) return;
-    await fetch(`/api/content/items/${selectedItem._id}/reject`, {
+    await apiFetch(`/api/content/items/${selectedItem._id}/reject`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-xgrowth-csrf': '1' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason: 'Rejected from queue' }),
     });
     setSelectedItem(null);

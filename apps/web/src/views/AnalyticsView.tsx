@@ -9,6 +9,7 @@ import {
   Minus,
   CheckCircle2,
 } from 'lucide-react';
+import { useApp } from '../context/AppContext.js';
 
 interface MetricDelta {
   current: number;
@@ -33,11 +34,12 @@ interface Report {
 }
 
 export function AnalyticsView() {
+  const { apiFetch } = useApp();
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchReports = () => {
-    fetch('/api/analytics/reports')
+    apiFetch('/api/analytics/reports')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -54,9 +56,9 @@ export function AnalyticsView() {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/analytics/reports/generate', {
+      const res = await apiFetch('/api/analytics/reports/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-xgrowth-csrf': '1' },
+        headers: { 'Content-Type': 'application/json' },
       });
       const data = await res.json();
       setReport(data);
@@ -65,9 +67,19 @@ export function AnalyticsView() {
     }
   };
 
-  const handleExport = (format: 'markdown' | 'json') => {
+  const handleExport = async (format: 'markdown' | 'json') => {
     if (!report) return;
-    window.location.href = `/api/analytics/reports/${report.id}/export?format=${format}`;
+    const res = await apiFetch(`/api/analytics/reports/${report.id}/export?format=${format}`);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `xgrowth-report-${report.id}.${format === 'json' ? 'json' : 'md'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const renderDeltaBadge = (delta?: MetricDelta) => {

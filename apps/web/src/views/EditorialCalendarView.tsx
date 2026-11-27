@@ -10,6 +10,7 @@ import {
   X,
   CheckCircle2,
 } from 'lucide-react';
+import { useApp } from '../context/AppContext.js';
 
 interface CalendarSlotDto {
   date: string;
@@ -42,6 +43,7 @@ interface ApprovedDraft {
 }
 
 export function EditorialCalendarView() {
+  const { apiFetch } = useApp();
   const [days, setDays] = useState<DayScheduleSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +61,7 @@ export function EditorialCalendarView() {
 
   const fetchSlots = () => {
     setLoading(true);
-    fetch('/api/calendar/slots?days=7')
+    apiFetch('/api/calendar/slots?days=7')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -71,7 +73,7 @@ export function EditorialCalendarView() {
   };
 
   const fetchSettings = () => {
-    fetch('/api/settings')
+    apiFetch('/api/settings')
       .then((res) => res.json())
       .then((data) => {
         if (data.preferredWindows && Array.isArray(data.preferredWindows)) {
@@ -85,7 +87,7 @@ export function EditorialCalendarView() {
   };
 
   const fetchApprovedDrafts = () => {
-    fetch('/api/content/items?status=approved')
+    apiFetch('/api/content/items?status=approved')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -109,11 +111,10 @@ export function EditorialCalendarView() {
     if (!assignTargetSlot) return;
     setAssignLoading(true);
     try {
-      const res = await fetch('/api/calendar/assign-slot', {
+      const res = await apiFetch('/api/calendar/assign-slot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({
           contentItemId: draftId,
@@ -131,11 +132,10 @@ export function EditorialCalendarView() {
 
   const handleUnassignSlot = async (itemId: string) => {
     try {
-      const res = await fetch('/api/calendar/unassign-slot', {
+      const res = await apiFetch('/api/calendar/unassign-slot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({ contentItemId: itemId }),
       });
@@ -161,11 +161,10 @@ export function EditorialCalendarView() {
     e.preventDefault();
     setSavingConfig(true);
     try {
-      const res = await fetch('/api/settings', {
+      const res = await apiFetch('/api/settings', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({
           preferredWindows: configWindows,

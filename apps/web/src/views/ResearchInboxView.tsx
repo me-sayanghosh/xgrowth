@@ -39,10 +39,12 @@ interface ResearchSource {
 }
 
 export function ResearchInboxView() {
-  const { setActiveView } = useApp();
+  const { setActiveView, apiFetch } = useApp();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [sources, setSources] = useState<ResearchSource[]>([]);
   const [loading, setLoading] = useState(false);
+  const [agentRunning, setAgentRunning] = useState(false);
+  const [agentBanner, setAgentBanner] = useState<string | null>(null);
   const [syncingSourceId, setSyncingSourceId] = useState<string | null>(null);
 
   // Modals state
@@ -68,7 +70,7 @@ export function ResearchInboxView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchCandidates = () => {
-    fetch('/api/research/candidates')
+    apiFetch('/api/research/candidates')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setCandidates(data);
@@ -77,7 +79,7 @@ export function ResearchInboxView() {
   };
 
   const fetchSources = () => {
-    fetch('/api/research/sources')
+    apiFetch('/api/research/sources')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setSources(data);
@@ -90,12 +92,34 @@ export function ResearchInboxView() {
     fetchSources();
   }, []);
 
+  const handleRunAgentPipeline = async () => {
+    setAgentRunning(true);
+    setAgentBanner(null);
+    try {
+      const res = await apiFetch('/api/research/agent/run-pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxTopics: 2, syncFeeds: true, variantCount: 2 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAgentBanner(
+          `Agent Pipeline Complete: ${data.syncedMessage} Processed ${data.processedTopics} topic(s) and queued ${data.generatedDraftsCount} draft(s) in Review Queue.`,
+        );
+        fetchCandidates();
+      }
+    } catch {
+      setAgentBanner('Failed to execute Twitter agent pipeline.');
+    } finally {
+      setAgentRunning(false);
+    }
+  };
+
   const promoteToBrief = async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/research/candidates/${id}/to-brief`, {
+      const res = await apiFetch(`/api/research/candidates/${id}/to-brief`, {
         method: 'POST',
-        headers: { 'x-xgrowth-csrf': '1' },
       });
       const data = await res.json();
       if (data.success) {
@@ -113,12 +137,9 @@ export function ResearchInboxView() {
     if (!newSourceName.trim() || !newSourceUrl.trim()) return;
 
     try {
-      const res = await fetch('/api/research/sources', {
+      const res = await apiFetch('/api/research/sources', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newSourceName.trim(),
           url: newSourceUrl.trim(),
@@ -138,12 +159,9 @@ export function ResearchInboxView() {
 
   const handleToggleSource = async (id: string, currentActive: boolean) => {
     try {
-      const res = await fetch(`/api/research/sources/${id}`, {
+      const res = await apiFetch(`/api/research/sources/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !currentActive }),
       });
       if (res.ok) {
@@ -159,9 +177,8 @@ export function ResearchInboxView() {
   const handleDeleteSource = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this research source?')) return;
     try {
-      const res = await fetch(`/api/research/sources/${id}`, {
+      const res = await apiFetch(`/api/research/sources/${id}`, {
         method: 'DELETE',
-        headers: { 'x-xgrowth-csrf': '1' },
       });
       if (res.ok) {
         setSources((prev) => prev.filter((s) => s._id !== id));
@@ -174,9 +191,8 @@ export function ResearchInboxView() {
   const handleSyncSource = async (id: string) => {
     setSyncingSourceId(id);
     try {
-      await fetch(`/api/research/sources/${id}/sync`, {
+      await apiFetch(`/api/research/sources/${id}/sync`, {
         method: 'POST',
-        headers: { 'x-xgrowth-csrf': '1' },
       });
       fetchSources();
       fetchCandidates();
@@ -192,12 +208,9 @@ export function ResearchInboxView() {
     if (!newCandTitle.trim() || !newCandUrl.trim()) return;
 
     try {
-      const res = await fetch('/api/research/candidates', {
+      const res = await apiFetch('/api/research/candidates', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: newCandTitle.trim(),
           sourceUrl: newCandUrl.trim(),
@@ -221,7 +234,7 @@ export function ResearchInboxView() {
 
   const handleExportOpml = async () => {
     try {
-      const res = await fetch('/api/research/sources/opml/export');
+      const res = await apiFetch('/api/research/sources/opml/export');
       const xml = await res.text();
       const blob = new Blob([xml], { type: 'text/xml' });
       const url = URL.createObjectURL(blob);
@@ -241,12 +254,9 @@ export function ResearchInboxView() {
     if (!opmlText.trim()) return;
     setOpmlStatus('Importing...');
     try {
-      const res = await fetch('/api/research/sources/opml/import', {
+      const res = await apiFetch('/api/research/sources/opml/import', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ opmlText }),
       });
       const data = await res.json();
@@ -289,6 +299,14 @@ export function ResearchInboxView() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
+            onClick={handleRunAgentPipeline}
+            disabled={agentRunning}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition disabled:opacity-50"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${agentRunning ? 'animate-spin' : ''}`} />
+            <span>{agentRunning ? 'Running Agent...' : 'Run Agent Pipeline'}</span>
+          </button>
+          <button
             onClick={() => setShowCandidateModal(true)}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition"
           >
@@ -320,6 +338,16 @@ export function ResearchInboxView() {
           </button>
         </div>
       </div>
+
+      {/* Agent Result Banner */}
+      {agentBanner && (
+        <div className="p-3 bg-emerald-950/50 border border-emerald-800 rounded-xl text-xs text-emerald-200 flex items-center justify-between">
+          <span>{agentBanner}</span>
+          <button onClick={() => setActiveView('queue')} className="underline text-emerald-300 font-semibold ml-3 shrink-0">
+            Open Review Queue
+          </button>
+        </div>
+      )}
 
       {/* Candidate List */}
       <div className="grid grid-cols-1 gap-4">

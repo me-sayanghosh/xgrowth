@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react';
+import { useApp } from '../context/AppContext.js';
 
 interface Channel {
   id: string;
@@ -27,6 +28,7 @@ interface BufferQuotaStatus {
 }
 
 export function BufferChannelsView() {
+  const { apiFetch } = useApp();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [quota, setQuota] = useState<BufferQuotaStatus>({
     monthlyLimit: 1000,
@@ -41,7 +43,7 @@ export function BufferChannelsView() {
 
   const fetchChannels = () => {
     setLoading(true);
-    fetch('/api/buffer/channels')
+    apiFetch('/api/buffer/channels')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setChannels(data);
@@ -50,7 +52,7 @@ export function BufferChannelsView() {
   };
 
   const fetchQuota = () => {
-    fetch('/api/buffer/quota')
+    apiFetch('/api/buffer/quota')
       .then((res) => res.json())
       .then((data) => {
         if (data && typeof data.monthlyLimit === 'number') {
@@ -67,14 +69,31 @@ export function BufferChannelsView() {
 
   const testConnection = () => {
     setTestStatus('Testing server-side Personal API key with Buffer GraphQL endpoint...');
-    setTimeout(() => {
-      setTestStatus('Buffer GraphQL connection verified! Personal API key is valid.');
-    }, 800);
+    apiFetch('/api/buffer/channels')
+      .then((res) => {
+        if (res.ok) {
+          setTestStatus('Buffer GraphQL connection verified! Personal API key is valid.');
+        } else {
+          setTestStatus(`Buffer connection check returned HTTP ${res.status}.`);
+        }
+      })
+      .catch(() => setTestStatus('Failed to reach Buffer connector endpoint.'));
   };
 
-  const handleDownload = (format: 'json' | 'csv') => {
-    window.location.href = `/api/buffer/export?format=${format}`;
-    setTimeout(() => setShowExportModal(false), 500);
+  const handleDownload = async (format: 'json' | 'csv') => {
+    const res = await apiFetch(`/api/buffer/export?format=${format}`);
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `xgrowth-queue-${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    setShowExportModal(false);
   };
 
   const usagePercent = Math.min(

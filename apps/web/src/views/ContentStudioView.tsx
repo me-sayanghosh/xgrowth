@@ -15,7 +15,7 @@ interface CtaItem {
 }
 
 export function ContentStudioView() {
-  const { setActiveView } = useApp();
+  const { setActiveView, apiFetch } = useApp();
   const [topic, setTopic] = useState('');
   const [pillar, setPillar] = useState('Backend and full-stack development');
   const [format, setFormat] = useState('single_post');
@@ -47,11 +47,10 @@ export function ContentStudioView() {
         .map((f) => f.trim())
         .filter(Boolean);
 
-      const res = await fetch('/api/content/generate', {
+      const res = await apiFetch('/api/content/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({
           topic,
@@ -78,11 +77,10 @@ export function ContentStudioView() {
     setHooksLoading(true);
     setShowHookModal(true);
     try {
-      const res = await fetch('/api/content/hooks/generate', {
+      const res = await apiFetch('/api/content/hooks/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({
           topic: topic.trim(),
@@ -107,11 +105,10 @@ export function ContentStudioView() {
     setCtasLoading(true);
     setShowCtaModal(true);
     try {
-      const res = await fetch('/api/content/cta/suggest', {
+      const res = await apiFetch('/api/content/cta/suggest', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-xgrowth-csrf': '1',
         },
         body: JSON.stringify({
           topic: topic.trim(),
