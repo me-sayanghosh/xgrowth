@@ -5,8 +5,10 @@ import { ResearchSourceModel } from '../db/models/research-source.model.js';
 import { TopicModel } from '../db/models/topic.model.js';
 import { BriefExtractorService } from '../services/research/brief-extractor.js';
 import { OpmlService } from '../services/research/opml-importer.js';
+import { SafeFetcher } from '../services/research/safe-fetcher.js';
 import { singleOwnerAuthMiddleware } from '../middlewares/auth.js';
 import { csrfProtection } from '../middlewares/csrf.js';
+import { mutationRateLimiter } from '../middlewares/rate-limit.js';
 
 export const researchRouter = Router();
 
@@ -14,7 +16,7 @@ researchRouter.use(singleOwnerAuthMiddleware);
 
 // Research sources
 researchRouter.get('/sources', ResearchSourceController.listSources);
-researchRouter.post('/sources', csrfProtection, ResearchSourceController.createSource);
+researchRouter.post('/sources', csrfProtection, mutationRateLimiter, ResearchSourceController.createSource);
 researchRouter.get('/sources/opml/export', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const sources = await ResearchSourceModel.find().lean();
@@ -63,9 +65,9 @@ researchRouter.post('/sources/opml/import', csrfProtection, async (req: Request,
   }
 });
 
-researchRouter.patch('/sources/:id', csrfProtection, ResearchSourceController.updateSource);
-researchRouter.delete('/sources/:id', csrfProtection, ResearchSourceController.deleteSource);
-researchRouter.post('/sources/:id/sync', csrfProtection, ResearchSourceController.syncSource);
+researchRouter.patch('/sources/:id', csrfProtection, mutationRateLimiter, ResearchSourceController.updateSource);
+researchRouter.delete('/sources/:id', csrfProtection, mutationRateLimiter, ResearchSourceController.deleteSource);
+researchRouter.post('/sources/:id/sync', csrfProtection, mutationRateLimiter, ResearchSourceController.syncSource);
 
 // Candidate topics
 const createCandidateSchema = z.object({

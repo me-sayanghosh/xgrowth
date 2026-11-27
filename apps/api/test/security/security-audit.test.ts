@@ -71,7 +71,7 @@ describe('Security Hardening & Token Leakage Regression Suite', () => {
 
     app.get('/api/test-leakage', (req, _res, next) => {
       const token = req.headers.authorization || 'unknown';
-      const err = new Error(`Database connection failed: internal details with ${token}`);
+      const err = new Error(`Upstream failed at https://api.example.com?key=AIzaSecret123 with ${token}`);
       (err as unknown as { status: number }).status = 502;
       next(err);
     });
@@ -85,6 +85,9 @@ describe('Security Hardening & Token Leakage Regression Suite', () => {
     expect(res.status).toBe(502);
     expect(res.body.correlationId).toBeDefined();
     expect(res.body).not.toHaveProperty('stack');
+    expect(res.body.message).not.toContain('sensitive-auth-token-12345');
+    expect(res.body.message).not.toContain('AIzaSecret123');
+    expect(res.body.message).toContain('[REDACTED]');
   });
 
   it('verifies SafeFetcher rejects SSRF attempts to private and loopback networks', async () => {

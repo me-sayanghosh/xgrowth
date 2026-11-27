@@ -6,6 +6,7 @@ import { correlationMiddleware } from './middlewares/correlation.js';
 import { requestLogger } from './middlewares/logger.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { configureSecurityMiddlewares } from './middlewares/security.js';
+import { globalRateLimiter } from './middlewares/rate-limit.js';
 import { healthRouter } from './routes/health.router.js';
 import { settingsRouter } from './routes/settings.router.js';
 import { auditRouter } from './routes/audit.router.js';
@@ -39,6 +40,7 @@ export class AppServer {
     this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
     this.app.use(correlationMiddleware);
     this.app.use(requestLogger);
+    this.app.use('/api', globalRateLimiter);
   }
 
   private configureRoutes(): void {
