@@ -95,10 +95,11 @@ export function createXGrowthMcpServer(client?: XGrowthApiClient): McpServer {
       topic: z.string().describe('The primary subject or headline to write about.'),
       verifiedFacts: z.array(z.string()).min(1).describe('List of verified technical facts, quotes, or findings.'),
       format: z
-        .enum(['single_post', 'short_educational', 'practical_tip', 'build_in_public', 'opinion_with_reasoning', 'thread'])
+        .enum(['single_post', 'educational_tip', 'build_in_public', 'opinion_with_reasoning', 'thread_draft'])
         .default('single_post')
         .describe('Content format type.'),
       topicPillar: z.string().optional().describe('Target content pillar (e.g. "Software engineering", "TypeScript & Node.js").'),
+      language: z.enum(['en', 'bn', 'mixed']).optional().describe('Target content language (en, bn, mixed).'),
       variantCount: z.number().int().min(1).max(3).default(2).describe('Number of variants to generate.'),
     },
     async (args) => {
@@ -256,6 +257,201 @@ export function createXGrowthMcpServer(client?: XGrowthApiClient): McpServer {
         return {
           isError: true,
           content: [{ type: 'text', text: `Failed to retrieve weekly report: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 10. List Connected Buffer Channels & Quota
+  server.tool(
+    'xgrowth_list_channels',
+    'Discover connected Buffer X (Twitter) channels and check current monthly API request quota.',
+    {},
+    async () => {
+      try {
+        const result = await apiClient.listChannels();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to list Buffer channels: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 11. Run Autonomous Research-to-Draft Pipeline
+  server.tool(
+    'xgrowth_run_daily_pipeline',
+    'Execute the autonomous Twitter agent pipeline: sync RSS feeds, rank top topics, extract briefs, and queue linted drafts for human review.',
+    {
+      maxTopics: z.number().int().min(1).max(5).default(2).describe('Maximum discovered topics to turn into drafts.'),
+      syncFeeds: z.boolean().default(true).describe('Whether to sync active RSS sources first.'),
+      format: z
+        .enum(['single_post', 'educational_tip', 'build_in_public', 'opinion_with_reasoning', 'thread_draft'])
+        .optional()
+        .describe('Optional override content format for generated drafts.'),
+      variantCount: z.number().int().min(1).max(3).default(2).describe('Draft variants per topic.'),
+    },
+    async (args) => {
+      try {
+        const result = await apiClient.runDailyPipeline(args);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Daily agent pipeline failed: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 12. Generate Opening Hooks
+  server.tool(
+    'xgrowth_generate_hooks',
+    'Generate non-clickbait engineering opening hook variants under 140 characters.',
+    {
+      topic: z.string().min(1).describe('Topic to generate opening hooks for.'),
+      pillar: z.string().optional().describe('Target topic pillar.'),
+      keyTakeaway: z.string().optional().describe('Core technical takeaway.'),
+      language: z.enum(['en', 'bn', 'mixed']).optional().describe('Target language.'),
+      count: z.number().int().min(1).max(5).default(4).describe('Number of hooks to generate.'),
+    },
+    async (args) => {
+      try {
+        const result = await apiClient.generateHooks(args);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result.hooks, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Hook generation failed: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 13. Suggest Technical CTAs
+  server.tool(
+    'xgrowth_suggest_ctas',
+    'Suggest authentic, non-manipulative technical discussion CTAs for X posts.',
+    {
+      topic: z.string().min(1).describe('Topic of the post.'),
+      format: z
+        .enum(['single_post', 'educational_tip', 'build_in_public', 'opinion_with_reasoning', 'thread_draft'])
+        .optional()
+        .describe('Content format.'),
+      language: z.enum(['en', 'bn', 'mixed']).optional().describe('Target language.'),
+      count: z.number().int().min(1).max(5).default(4).describe('Number of CTAs to suggest.'),
+    },
+    async (args) => {
+      try {
+        const result = await apiClient.suggestCtas(args);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result.ctas, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `CTA suggestion failed: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 14. Edit Draft
+  server.tool(
+    'xgrowth_edit_draft',
+    'Update a draft text, threadParts, or topicPillar. Automatically invalidates prior approval if modified after approval.',
+    {
+      contentItemId: z.string().describe('The ID of the draft to edit.'),
+      text: z.string().optional().describe('Updated primary text.'),
+      threadParts: z.array(z.string()).optional().describe('Updated sequential thread tweets.'),
+      topicPillar: z.string().optional().describe('Updated topic pillar.'),
+    },
+    async ({ contentItemId, ...updates }) => {
+      try {
+        const item = await apiClient.editDraft(contentItemId, updates);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(item, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to edit draft: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 15. Reject Draft
+  server.tool(
+    'xgrowth_reject_draft',
+    'Reject a draft in review queue with an audit reason.',
+    {
+      contentItemId: z.string().describe('The ID of the draft to reject.'),
+      reason: z.string().optional().describe('Rejection reason for audit log.'),
+    },
+    async ({ contentItemId, reason }) => {
+      try {
+        const res = await apiClient.rejectDraft(contentItemId, reason);
+        return {
+          content: [{ type: 'text', text: `Draft ${contentItemId} marked as '${res.item.status}'.` }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to reject draft: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 16. Get Editorial Calendar Slots
+  server.tool(
+    'xgrowth_get_calendar',
+    'View upcoming publishing windows, assigned posts, and daily cap conflicts.',
+    {
+      days: z.number().int().min(1).max(30).default(7).describe('Number of upcoming days to inspect.'),
+    },
+    async ({ days }) => {
+      try {
+        const slots = await apiClient.getCalendarSlots(days);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(slots, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to fetch calendar: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 17. Schedule Approved Post into Calendar Slot
+  server.tool(
+    'xgrowth_schedule_post',
+    'Assign an approved post to a target UTC ISO timestamp slot on the editorial calendar.',
+    {
+      contentItemId: z.string().describe('The ID of the content item to schedule.'),
+      scheduledFor: z.string().describe('ISO 8601 UTC timestamp for target slot (e.g. 2026-11-28T09:00:00.000Z).'),
+    },
+    async ({ contentItemId, scheduledFor }) => {
+      try {
+        await apiClient.schedulePost(contentItemId, scheduledFor);
+        return {
+          content: [{ type: 'text', text: `Scheduled item ${contentItemId} for ${scheduledFor}.` }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to schedule post: ${err instanceof Error ? err.message : String(err)}` }],
         };
       }
     },

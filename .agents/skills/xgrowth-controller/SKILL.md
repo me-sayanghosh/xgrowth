@@ -58,37 +58,42 @@ The server exports reusable prompt templates to guide the agent:
 
 ## Operating Workflows
 
-### 1. Check System Health & Status
+### 1. Check System Health & Discover Buffer Channel
 ```json
-// Call tool
+// Call tools
 xgrowth_get_status()
+xgrowth_list_channels()
 ```
 Inspect:
 - `globalPause`: whether submissions are halted.
 - `pendingReviewCount`: drafts waiting for owner inspection.
-- `brandPillars`: configured topic categories.
+- `channels[].id`: the connected Buffer X channel ID needed for approval and submission.
 
-### 2. Research Timely Engineering Topics
+### 2. Autonomous Research-to-Draft Agent Pipeline (or Manual Research)
 ```json
-// Call tool
+// Run end-to-end daily research -> brief -> draft pipeline:
+xgrowth_run_daily_pipeline({ "maxTopics": 2, "syncFeeds": true, "format": "educational_tip" })
+
+// Or fetch candidate topics directly:
 xgrowth_research_topics()
 ```
-Returns curated RSS articles and technical discussions ranked by credibility and freshness.
 
-### 3. Generate Technical Drafts
+### 3. Generate Technical Drafts, Hooks & CTAs
 ```json
-// Call tool
+// Valid formats: single_post, educational_tip, build_in_public, opinion_with_reasoning, thread_draft
 xgrowth_generate_draft({
   "topic": "Type-Level Programming in TypeScript",
   "verifiedFacts": [
     "Conditional types and template literals enforce compile-time state transitions.",
     "Eliminates entire classes of runtime validation errors in domain models."
   ],
-  "format": "single_post",
+  "format": "thread_draft",
   "topicPillar": "TypeScript & Node.js",
+  "language": "en",
   "variantCount": 2
 })
 ```
+You can also call `xgrowth_generate_hooks`, `xgrowth_suggest_ctas`, `xgrowth_edit_draft`, `xgrowth_reject_draft`, `xgrowth_get_calendar`, and `xgrowth_schedule_post`.
 Drafts are generated using Gemini, validated for Twitter's 280-character limit, linted against hype/buzzwords, and placed in `needs_review` state.
 
 ### 4. Review & Approval

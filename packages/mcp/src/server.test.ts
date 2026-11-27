@@ -107,6 +107,29 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
         whatNeedsTesting: ['Code snippets vs conceptual hooks'],
         nextExperiments: ['Publish build-in-public checklists'],
       }),
+      listChannels: vi.fn().mockResolvedValue({
+        channels: [{ id: 'buffer-chan-x-001', name: '@engineer_brand', service: 'x', isQueuePaused: false, timezone: 'UTC' }],
+        quota: { monthlyLimit: 1000, usageCount: 12, remaining: 988 },
+      }),
+      runDailyPipeline: vi.fn().mockResolvedValue({
+        success: true,
+        syncedMessage: 'Synced 4 topics',
+        processedTopics: 1,
+        generatedDraftsCount: 2,
+        draftIds: ['item-201', 'item-202'],
+      }),
+      generateHooks: vi.fn().mockResolvedValue({
+        success: true,
+        hooks: [{ hook: 'Most distributed outages start with one missing timeout.', style: 'problem_first', charCount: 55 }],
+      }),
+      suggestCtas: vi.fn().mockResolvedValue({
+        success: true,
+        ctas: [{ cta: 'How do you handle backoff in your services?', type: 'experience_sharing', charCount: 44 }],
+      }),
+      editDraft: vi.fn().mockResolvedValue({ id: 'item-101', status: 'needs_review', text: 'Updated text' }),
+      rejectDraft: vi.fn().mockResolvedValue({ success: true, item: { id: 'item-101', status: 'rejected' } }),
+      getCalendarSlots: vi.fn().mockResolvedValue([{ date: '2026-11-28', totalScheduled: 0, maxAllowed: 3 }]),
+      schedulePost: vi.fn().mockResolvedValue({ success: true, item: { id: 'item-101' } }),
     } as unknown as XGrowthApiClient;
 
     const server = createXGrowthMcpServer(mockApiClient);
@@ -122,7 +145,7 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
     await client.close();
   });
 
-  it('registers all 9 expected XGrowth management tools', async () => {
+  it('registers all 17 expected XGrowth management and agent tools', async () => {
     const listResult = await client.listTools();
     const toolNames = listResult.tools.map((t) => t.name);
 
@@ -135,7 +158,15 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
     expect(toolNames).toContain('xgrowth_submit_to_buffer');
     expect(toolNames).toContain('xgrowth_reconcile_status');
     expect(toolNames).toContain('xgrowth_get_weekly_report');
-    expect(toolNames.length).toBe(9);
+    expect(toolNames).toContain('xgrowth_list_channels');
+    expect(toolNames).toContain('xgrowth_run_daily_pipeline');
+    expect(toolNames).toContain('xgrowth_generate_hooks');
+    expect(toolNames).toContain('xgrowth_suggest_ctas');
+    expect(toolNames).toContain('xgrowth_edit_draft');
+    expect(toolNames).toContain('xgrowth_reject_draft');
+    expect(toolNames).toContain('xgrowth_get_calendar');
+    expect(toolNames).toContain('xgrowth_schedule_post');
+    expect(toolNames.length).toBe(17);
   });
 
   it('executes xgrowth_get_status and returns system status payload', async () => {
@@ -280,5 +311,31 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
     const msg = prompt.messages[0]?.content as { type: string; text: string };
     expect(msg.text).toContain('Strict 280-character boundary');
     expect(msg.text).toContain('Zero clickbait');
+  });
+
+  it('executes agent tools xgrowth_list_channels, xgrowth_run_daily_pipeline, and thread_draft generation', async () => {
+    const chRes = await client.callTool({ name: 'xgrowth_list_channels', arguments: {} });
+    expect(chRes.isError).toBeFalsy();
+    const chText = (chRes.content as Array<{ text: string }>)[0]?.text ?? '';
+    expect(chText).toContain('buffer-chan-x-001');
+
+    const pipeRes = await client.callTool({
+      name: 'xgrowth_run_daily_pipeline',
+      arguments: { maxTopics: 1, format: 'thread_draft' },
+    });
+    expect(pipeRes.isError).toBeFalsy();
+    const pipeText = (pipeRes.content as Array<{ text: string }>)[0]?.text ?? '';
+    expect(pipeText).toContain('generatedDraftsCount');
+
+    const draftRes = await client.callTool({
+      name: 'xgrowth_generate_draft',
+      arguments: {
+        topic: 'Node.js Streams',
+        verifiedFacts: ['Backpressure prevents memory bloat'],
+        format: 'educational_tip',
+        language: 'en',
+      },
+    });
+    expect(draftRes.isError).toBeFalsy();
   });
 });

@@ -129,11 +129,96 @@ export class XGrowthApiClient {
     verifiedFacts: string[];
     format?: string;
     topicPillar?: string;
+    language?: 'en' | 'bn' | 'mixed';
     variantCount?: number;
   }): Promise<{ success: boolean; items: GeneratedDraftItem[] }> {
     return this.request<{ success: boolean; items: GeneratedDraftItem[] }>('/api/content/generate', {
       method: 'POST',
       body: JSON.stringify(params),
+    });
+  }
+
+  public async listChannels(): Promise<{
+    channels: Array<{ id: string; name: string; service: string; isQueuePaused: boolean; timezone: string }>;
+    quota: { monthlyLimit: number; usageCount: number; remaining: number };
+  }> {
+    const [channels, quota] = await Promise.all([
+      this.request<Array<{ id: string; name: string; service: string; isQueuePaused: boolean; timezone: string }>>(
+        '/api/buffer/channels',
+      ),
+      this.request<{ monthlyLimit: number; usageCount: number; remaining: number }>('/api/buffer/quota'),
+    ]);
+    return { channels, quota };
+  }
+
+  public async runDailyPipeline(params?: {
+    maxTopics?: number;
+    syncFeeds?: boolean;
+    format?: string;
+    variantCount?: number;
+  }): Promise<{
+    success: boolean;
+    syncedMessage: string;
+    processedTopics: number;
+    generatedDraftsCount: number;
+    draftIds: string[];
+  }> {
+    return this.request('/api/research/agent/run-pipeline', {
+      method: 'POST',
+      body: JSON.stringify(params || {}),
+    });
+  }
+
+  public async generateHooks(params: {
+    topic: string;
+    pillar?: string;
+    keyTakeaway?: string;
+    language?: 'en' | 'bn' | 'mixed';
+    count?: number;
+  }): Promise<{ success: boolean; hooks: Array<{ hook: string; style: string; charCount: number }> }> {
+    return this.request('/api/content/hooks/generate', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  public async suggestCtas(params: {
+    topic: string;
+    format?: string;
+    language?: 'en' | 'bn' | 'mixed';
+    count?: number;
+  }): Promise<{ success: boolean; ctas: Array<{ cta: string; type: string; charCount: number }> }> {
+    return this.request('/api/content/cta/suggest', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  public async editDraft(
+    id: string,
+    updates: { text?: string; threadParts?: string[]; topicPillar?: string; channelId?: string },
+  ): Promise<ContentItemDetails> {
+    return this.request<ContentItemDetails>(`/api/content/items/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  public async rejectDraft(id: string, reason?: string): Promise<{ success: boolean; item: ContentItemDetails }> {
+    return this.request<{ success: boolean; item: ContentItemDetails }>(`/api/content/items/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  public async getCalendarSlots(days = 7): Promise<unknown[]> {
+    return this.request<unknown[]>(`/api/calendar/slots?days=${days}`);
+  }
+
+  public async schedulePost(contentItemId: string, scheduledFor: string): Promise<{ success: boolean; item: ContentItemDetails }> {
+    return this.request<{ success: boolean; item: ContentItemDetails }>('/api/calendar/assign-slot', {
+      method: 'POST',
+      body: JSON.stringify({ contentItemId, scheduledFor }),
     });
   }
 
