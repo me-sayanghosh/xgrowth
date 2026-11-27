@@ -29,10 +29,6 @@ export class BufferQuotaTracker {
     return Math.max(0, this.monthlyLimit - this.usageCount);
   }
 
-  public static getUsageCount(): number {
-    return this.usageCount;
-  }
-
   public static setUsageCount(count: number): void {
     this.usageCount = count;
   }

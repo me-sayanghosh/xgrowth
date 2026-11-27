@@ -3,13 +3,6 @@ import { ZodError } from 'zod';
 import { logger } from './logger.js';
 import { RequestWithCorrelation } from './correlation.js';
 
-export interface ApiErrorResponse {
-  error: string;
-  message: string;
-  correlationId?: string;
-  details?: unknown;
-}
-
 export function sanitizeErrorMessage(raw: string): string {
   return raw
     .replace(/([?&](?:key|apiKey|token|api_key|secret)=)[^&\s]+/gi, '$1[REDACTED]')

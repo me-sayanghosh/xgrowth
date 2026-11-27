@@ -93,6 +93,26 @@ export class ContentItemController {
     }
   }
 
+  private static async applyRejection(
+    item: NonNullable<Awaited<ReturnType<typeof ContentItemModel.findById>>>,
+    actor: string,
+    reason?: string,
+  ) {
+    ContentStateMachine.assertTransition(item.status, ContentStatusEnum.REJECTED);
+    item.status = ContentStatusEnum.REJECTED;
+    await item.save();
+
+    await AuditService.recordEvent({
+      action: AuditActionEnum.CONTENT_REJECTED,
+      actor,
+      targetId: item._id.toString(),
+      targetType: 'ContentItem',
+      metadata: { reason },
+    });
+
+    return item;
+  }
+
   public static async rejectItem(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { reason } = rejectItemSchema.parse(req.body);
@@ -104,18 +124,7 @@ export class ContentItemController {
         return;
       }
 
-      ContentStateMachine.assertTransition(item.status, ContentStatusEnum.REJECTED);
-      item.status = ContentStatusEnum.REJECTED;
-      await item.save();
-
-      await AuditService.recordEvent({
-        action: AuditActionEnum.CONTENT_REJECTED,
-        actor,
-        targetId: item._id.toString(),
-        targetType: 'ContentItem',
-        metadata: { reason },
-      });
-
+      await ContentItemController.applyRejection(item, actor, reason);
       res.json({ success: true, item });
     } catch (error) {
       next(error);
@@ -126,7 +135,7 @@ export class ContentItemController {
     try {
       const { ids, channelId } = batchApproveSchema.parse(req.body);
       const actor = (req as { user?: { id?: string } }).user?.id || 'owner';
-      const approved: any[] = [];
+      const approved: unknown[] = [];
       const errors: Array<{ id: string; error: string }> = [];
 
       for (const id of ids) {
@@ -157,7 +166,7 @@ export class ContentItemController {
     try {
       const { ids, reason } = batchRejectSchema.parse(req.body);
       const actor = (req as { user?: { id?: string } }).user?.id || 'owner';
-      const rejected: any[] = [];
+      const rejected: unknown[] = [];
       const errors: Array<{ id: string; error: string }> = [];
 
       for (const id of ids) {
@@ -167,17 +176,7 @@ export class ContentItemController {
             errors.push({ id, error: 'Not found' });
             continue;
           }
-          ContentStateMachine.assertTransition(item.status, ContentStatusEnum.REJECTED);
-          item.status = ContentStatusEnum.REJECTED;
-          await item.save();
-
-          await AuditService.recordEvent({
-            action: AuditActionEnum.CONTENT_REJECTED,
-            actor,
-            targetId: item._id.toString(),
-            targetType: 'ContentItem',
-            metadata: { reason: reason || 'Batch rejected' },
-          });
+          await ContentItemController.applyRejection(item, actor, reason || 'Batch rejected');
           rejected.push(item);
         } catch (err) {
           errors.push({ id, error: (err as Error).message });

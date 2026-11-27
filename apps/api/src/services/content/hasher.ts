@@ -23,9 +23,4 @@ export class ContentHasher {
     const serialized = JSON.stringify(canonicalObject);
     return crypto.createHash('sha256').update(serialized).digest('hex');
   }
-
-  public static verifyApprovalHash(input: HashableContent, expectedHash: string): boolean {
-    const computed = this.computeApprovalHash(input);
-    return computed === expectedHash;
-  }
 }

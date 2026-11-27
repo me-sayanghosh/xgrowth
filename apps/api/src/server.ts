@@ -93,8 +93,3 @@ export class AppServer {
     await dbConnection.disconnect();
   }
 }
-
-export function createExpressApp(): Express {
-  const appServer = new AppServer();
-  return appServer.app;
-}
