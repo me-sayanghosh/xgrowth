@@ -33,6 +33,10 @@ ${outlines}
   }
 
   public static parseOpml(opmlXml: string): OpmlFeedOutline[] {
+    if (opmlXml.length > 512 * 1024) {
+      throw new Error('OPML payload exceeds maximum allowed size (512 KB).');
+    }
+
     const feeds: OpmlFeedOutline[] = [];
     const outlineRegex = /<outline\s+([^>]+)\/?>/gi;
     let match: RegExpExecArray | null;
