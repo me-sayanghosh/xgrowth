@@ -95,9 +95,16 @@ researchRouter.get('/candidates', async (req: Request, res: Response, next: Next
   }
 });
 
-researchRouter.post('/candidates', csrfProtection, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+researchRouter.post('/candidates', csrfProtection, mutationRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const validated = createCandidateSchema.parse(req.body);
+    if (!SafeFetcher.isSafeUrl(validated.sourceUrl)) {
+      res.status(400).json({
+        error: 'INVALID_URL',
+        message: 'The provided candidate sourceUrl is internal or disallowed.',
+      });
+      return;
+    }
     const candidate = await TopicModel.create(validated);
     res.status(201).json(candidate);
   } catch (error) {
