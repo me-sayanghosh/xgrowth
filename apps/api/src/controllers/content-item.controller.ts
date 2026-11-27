@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { ContentItemModel } from '../db/models/content-item.model.js';
+import { ContentItemModel, ContentItemDocument } from '../db/models/content-item.model.js';
 import { ApprovalService } from '../services/content/approval.service.js';
 import { ContentItemService } from '../services/content/content-item.service.js';
 import { ContentStateMachine } from '../services/content/state-machine.js';
@@ -94,10 +94,10 @@ export class ContentItemController {
   }
 
   private static async applyRejection(
-    item: NonNullable<Awaited<ReturnType<typeof ContentItemModel.findById>>>,
+    item: ContentItemDocument,
     actor: string,
     reason?: string,
-  ) {
+  ): Promise<ContentItemDocument> {
     ContentStateMachine.assertTransition(item.status, ContentStatusEnum.REJECTED);
     item.status = ContentStatusEnum.REJECTED;
     await item.save();
