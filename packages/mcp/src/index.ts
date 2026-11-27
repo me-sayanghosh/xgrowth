@@ -7,9 +7,6 @@ import { XGrowthApiClient } from './client.js';
 export * from './client.js';
 export * from './server.js';
 
-export const MCP_SERVER_NAME = 'xgrowth-mcp';
-export const MCP_SERVER_VERSION = '0.1.0';
-
 export async function runServer(): Promise<void> {
   const server = createXGrowthMcpServer(new XGrowthApiClient());
   const transport = new StdioServerTransport();

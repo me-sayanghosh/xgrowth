@@ -11,5 +11,3 @@ export * from './schemas/research.js';
 export * from './schemas/audit.js';
 export * from './schemas/analytics.js';
 export * from './schemas/job.js';
-
-export const SHARED_PACKAGE_VERSION = '0.1.0';
