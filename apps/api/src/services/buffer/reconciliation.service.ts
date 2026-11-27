@@ -27,11 +27,18 @@ export class StatusReconciliationService {
 
     const channelId = submission.channelId;
     const providerPostId = submission.providerPostId || submission.idempotencyKey;
+    const expectedText =
+      item.format === 'thread_draft' && item.threadParts.length > 0
+        ? item.threadParts[0]
+        : item.text;
 
-    const res = await this.provider.reconcileSubmission(providerPostId, channelId);
+    const res = await this.provider.reconcileSubmission(providerPostId, channelId, expectedText);
 
     if (res.ok) {
       const response = res.value;
+      if (response.id && !submission.providerPostId) {
+        submission.providerPostId = response.id;
+      }
       if (response.providerStatus === 'queued' || response.providerStatus === 'scheduled') {
         item.status = ContentStatusEnum.QUEUED;
         submission.status = 'queued';
@@ -44,6 +51,7 @@ export class StatusReconciliationService {
       }
 
       if (!item.buffer) item.buffer = {};
+      if (response.id) item.buffer.submissionId = response.id;
       item.buffer.providerStatus = response.providerStatus;
       item.buffer.lastCheckedAt = new Date();
 

@@ -100,6 +100,24 @@ function classifyError(error: unknown): BufferProviderError {
   };
 }
 
+interface ChannelPostsQueryData {
+  posts?: {
+    edges?: Array<{
+      node?: {
+        id: string;
+        text?: string;
+        status?: string;
+        dueAt?: string;
+        sentAt?: string;
+      };
+    }>;
+  };
+}
+
+function normalizeForMatch(text: string): string {
+  return text.replace(/\r\n/g, '\n').trim();
+}
+
 export class BufferGraphQLProvider implements BufferProvider {
   public readonly name = 'buffer_graphql';
 
@@ -302,28 +320,118 @@ export class BufferGraphQLProvider implements BufferProvider {
 
   public async reconcileSubmission(
     submissionId: string,
-    _channelId: string,
+    channelId: string,
+    expectedText?: string,
   ): Promise<Result<BufferPostResponse, BufferProviderError>> {
-    const statusRes = await this.getPostStatus(submissionId);
-    if (!statusRes.ok) {
-      return err(statusRes.error);
+    const looksLikeIdempotencyKey = /^[a-f0-9]{64}$/i.test(submissionId) || !submissionId;
+
+    if (!looksLikeIdempotencyKey) {
+      const statusRes = await this.getPostStatus(submissionId);
+      if (statusRes.ok) {
+        const mappedStatus =
+          statusRes.value.status === 'published'
+            ? 'published'
+            : statusRes.value.status === 'scheduled'
+            ? 'scheduled'
+            : statusRes.value.status === 'failed'
+            ? 'failed'
+            : 'queued';
+
+        return ok({
+          success: mappedStatus !== 'failed',
+          id: submissionId,
+          providerStatus: mappedStatus,
+          scheduledAt: statusRes.value.publishedAt,
+          message: `Reconciled via Buffer GraphQL API (status: ${mappedStatus}).`,
+        });
+      }
+      if (!expectedText) {
+        return err(statusRes.error);
+      }
     }
 
-    const mappedStatus =
-      statusRes.value.status === 'published'
-        ? 'published'
-        : statusRes.value.status === 'scheduled'
-        ? 'scheduled'
-        : statusRes.value.status === 'failed'
-        ? 'failed'
-        : 'queued';
+    // Fallback for ambiguous timeout where no providerPostId was returned: inspect recent channel posts
+    if (!expectedText) {
+      return err({
+        code: 'MISSING_RECONCILIATION_CONTEXT',
+        message: 'Cannot reconcile without a Buffer post ID or expected post text.',
+        retryable: false,
+      });
+    }
 
-    return ok({
-      success: mappedStatus !== 'failed',
-      id: submissionId,
-      providerStatus: mappedStatus,
-      scheduledAt: statusRes.value.publishedAt,
-      message: `Reconciled via Buffer GraphQL API (status: ${mappedStatus}).`,
-    });
+    const channelsRes = await this.listChannels();
+    if (!channelsRes.ok) {
+      return err(channelsRes.error);
+    }
+
+    const matchedChannel = channelsRes.value.find((c) => c.id === channelId) || channelsRes.value[0];
+    const organizationId = matchedChannel?.organizationId;
+    if (!organizationId) {
+      return err({
+        code: 'ORGANIZATION_NOT_FOUND',
+        message: `Could not resolve Buffer organization for channel ${channelId}.`,
+        retryable: false,
+      });
+    }
+
+    const postsQuery = `
+      query GetChannelPosts($input: PostsInput!) {
+        posts(input: $input) {
+          edges {
+            node {
+              id
+              text
+              status
+              dueAt
+              sentAt
+            }
+          }
+        }
+      }
+    `;
+
+    try {
+      const resp = await BufferGraphQLClient.execute<ChannelPostsQueryData>({
+        query: postsQuery,
+        variables: {
+          input: {
+            organizationId,
+            filter: { channelIds: [channelId] },
+          },
+        },
+      });
+
+      if (resp.errors && resp.errors.length > 0) {
+        return err({
+          code: 'BUFFER_GRAPHQL_ERROR',
+          message: resp.errors.map((e) => e.message).join('; '),
+          retryable: false,
+        });
+      }
+
+      const targetNormalized = normalizeForMatch(expectedText);
+      const matchedNode = (resp.data?.posts?.edges || [])
+        .map((e) => e.node)
+        .find((node) => node?.text && normalizeForMatch(node.text) === targetNormalized);
+
+      if (matchedNode) {
+        const mappedStatus = mapProviderStatus(matchedNode.status, 'addToQueue');
+        return ok({
+          success: mappedStatus !== 'failed',
+          id: matchedNode.id,
+          providerStatus: mappedStatus,
+          scheduledAt: matchedNode.sentAt || matchedNode.dueAt,
+          message: `Recovered post ${matchedNode.id} from Buffer channel history.`,
+        });
+      }
+
+      return ok({
+        success: false,
+        providerStatus: 'failed',
+        message: 'Post not found in Buffer channel history; safe to mark failed.',
+      });
+    } catch (error) {
+      return err(classifyError(error));
+    }
   }
 }

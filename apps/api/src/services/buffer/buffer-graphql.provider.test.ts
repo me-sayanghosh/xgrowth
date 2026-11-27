@@ -173,4 +173,47 @@ describe('BufferGraphQLProvider Unit Tests', () => {
       expect(res.value.scheduledAt).toBe('2026-11-26T09:01:00.000Z');
     }
   });
+
+  it('recovers ambiguous timeout without postId by scanning Buffer channel post history', async () => {
+    const execSpy = vi
+      .spyOn(BufferGraphQLClient, 'execute')
+      .mockResolvedValueOnce({
+        data: {
+          account: {
+            organizations: [
+              {
+                id: 'org-1',
+                channels: [{ id: 'ch-x', name: 'Sayang X', service: 'twitter' }],
+              },
+            ],
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          posts: {
+            edges: [
+              {
+                node: {
+                  id: 'buf-recovered-777',
+                  text: 'Ambiguous timeout recovery test',
+                  status: 'queued',
+                  dueAt: '2026-11-28T09:00:00.000Z',
+                },
+              },
+            ],
+          },
+        },
+      });
+
+    const shaKey = 'a'.repeat(64);
+    const res = await provider.reconcileSubmission(shaKey, 'ch-x', 'Ambiguous timeout recovery test');
+
+    expect(execSpy).toHaveBeenCalledTimes(2);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.value.id).toBe('buf-recovered-777');
+      expect(res.value.providerStatus).toBe('queued');
+    }
+  });
 });

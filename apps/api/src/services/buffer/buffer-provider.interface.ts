@@ -13,5 +13,9 @@ export interface BufferProvider {
   listChannels(): Promise<Result<BufferChannel[], BufferProviderError>>;
   submitPost(input: BufferPostInput): Promise<Result<BufferPostResponse, BufferProviderError>>;
   getPostStatus(postId: string): Promise<Result<{ status: string; publishedAt?: string }, BufferProviderError>>;
-  reconcileSubmission(submissionId: string, channelId: string): Promise<Result<BufferPostResponse, BufferProviderError>>;
+  reconcileSubmission(
+    submissionId: string,
+    channelId: string,
+    expectedText?: string,
+  ): Promise<Result<BufferPostResponse, BufferProviderError>>;
 }
