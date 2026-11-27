@@ -4,8 +4,10 @@ import { ResearchSourceController } from '../controllers/research-source.control
 import { ResearchSourceModel } from '../db/models/research-source.model.js';
 import { TopicModel } from '../db/models/topic.model.js';
 import { BriefExtractorService } from '../services/research/brief-extractor.js';
+import { TwitterAgentService } from '../services/agent/twitter-agent.service.js';
 import { OpmlService } from '../services/research/opml-importer.js';
 import { SafeFetcher } from '../services/research/safe-fetcher.js';
+import { ContentFormatEnum } from '@xgrowth/shared';
 import { singleOwnerAuthMiddleware } from '../middlewares/auth.js';
 import { csrfProtection } from '../middlewares/csrf.js';
 import { mutationRateLimiter } from '../middlewares/rate-limit.js';
@@ -189,7 +191,7 @@ researchRouter.patch('/candidates/:id', csrfProtection, async (req: Request, res
   }
 });
 
-researchRouter.delete('/candidates/:id', csrfProtection, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+researchRouter.delete('/candidates/:id', csrfProtection, mutationRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const deleted = await TopicModel.findByIdAndDelete(req.params.id);
     if (!deleted) {
@@ -197,6 +199,38 @@ researchRouter.delete('/candidates/:id', csrfProtection, async (req: Request, re
       return;
     }
     res.json({ success: true, message: 'Candidate topic deleted.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const runPipelineSchema = z.object({
+  maxTopics: z.number().int().min(1).max(5).default(2),
+  syncFeeds: z.boolean().default(true),
+  format: z
+    .enum([
+      ContentFormatEnum.SINGLE_POST,
+      ContentFormatEnum.EDUCATIONAL_TIP,
+      ContentFormatEnum.BUILD_IN_PUBLIC,
+      ContentFormatEnum.OPINION_WITH_REASONING,
+      ContentFormatEnum.THREAD_DRAFT,
+    ])
+    .optional(),
+  variantCount: z.number().int().min(1).max(3).default(2),
+});
+
+researchRouter.post('/agent/run-pipeline', csrfProtection, mutationRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const validated = runPipelineSchema.parse(req.body || {});
+    const actor = (req as { user?: { id?: string } }).user?.id || 'owner';
+    const result = await TwitterAgentService.runDailyPipeline({
+      ...validated,
+      actor,
+    });
+    res.status(201).json({
+      success: true,
+      ...result,
+    });
   } catch (error) {
     next(error);
   }
