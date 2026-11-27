@@ -7,7 +7,7 @@ import { BriefExtractorService } from '../services/research/brief-extractor.js';
 import { TwitterAgentService } from '../services/agent/twitter-agent.service.js';
 import { OpmlService } from '../services/research/opml-importer.js';
 import { SafeFetcher } from '../services/research/safe-fetcher.js';
-import { ContentFormatEnum } from '@xgrowth/shared';
+import { contentFormatSchema } from '@xgrowth/shared';
 import { singleOwnerAuthMiddleware } from '../middlewares/auth.js';
 import { csrfProtection } from '../middlewares/csrf.js';
 import { mutationRateLimiter } from '../middlewares/rate-limit.js';
@@ -207,15 +207,7 @@ researchRouter.delete('/candidates/:id', csrfProtection, mutationRateLimiter, as
 const runPipelineSchema = z.object({
   maxTopics: z.number().int().min(1).max(5).default(2),
   syncFeeds: z.boolean().default(true),
-  format: z
-    .enum([
-      ContentFormatEnum.SINGLE_POST,
-      ContentFormatEnum.EDUCATIONAL_TIP,
-      ContentFormatEnum.BUILD_IN_PUBLIC,
-      ContentFormatEnum.OPINION_WITH_REASONING,
-      ContentFormatEnum.THREAD_DRAFT,
-    ])
-    .optional(),
+  format: contentFormatSchema.optional(),
   variantCount: z.number().int().min(1).max(3).default(2),
 });
 
