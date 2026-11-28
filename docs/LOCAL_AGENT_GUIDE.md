@@ -28,7 +28,6 @@ Only `BUFFER_API_KEY` is required in `.env` at the repository root:
 
 ```env
 BUFFER_API_KEY=<your_buffer_personal_api_key>
-XGROWTH_MODE=local
 ```
 
 Build the workspace once (and after any code changes):
@@ -71,7 +70,7 @@ npm run cli -- draft submit <draft_id> --mode addToQueue
 
 ## 4. Using from Antigravity
 
-- `.agents/mcp_config.json` launches `packages/mcp/dist/index.js` with `XGROWTH_MODE=local`.
+- `.agents/mcp_config.json` launches `packages/mcp/dist/index.js` directly against `data/` and Buffer.
 - `.agents/skills/xgrowth-controller/SKILL.md` guides Antigravity to:
   1. Read `xgrowth://style-profile` and your saved reference accounts.
   2. Research topics and author original posts under 280 characters via `xgrowth_create_draft`.

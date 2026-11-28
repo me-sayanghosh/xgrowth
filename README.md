@@ -1,46 +1,30 @@
-# XGrowth AI — Buffer-first Automation Starter Pack
+# XGrowth AI — Local Agent & Buffer Automation for X
 
-A specification and build pack for an AI-assisted X (Twitter) content, publishing, and growth workflow using **Buffer as the publishing queue** and **Antigravity as the development/agent environment**.
+A zero-database, zero-frontend AI content operations agent for **X (Twitter)** powered by **Antigravity / VS Code MCP + CLI** and **Buffer GraphQL** (`https://api.buffer.com`).
 
-> This pack is a build specification, not a claim that any account has been connected or that publishing is already enabled. Buffer's current API is a GraphQL API available on Free and paid plans, subject to limits. For a single-owner setup, use a personal API key stored server-side. Verify current limits and channel capabilities before implementation.
+> Single-owner architecture: Antigravity or VS Code Copilot researches topics, learns style patterns from saved reference accounts, drafts posts locally under strict 280-character and tone checks, and submits approved posts to Buffer with cryptographic SHA-256 approval locks.
 
-## Zero-DB Local Agent Mode (Recommended for Antigravity & VS Code)
-You can run XGrowth AI **without MongoDB, without the React frontend, and without `GEMINI_API_KEY`** by letting Antigravity or VS Code Copilot act as the AI writer over local JSON storage (`data/`) connected directly to Buffer:
-- See [docs/LOCAL_AGENT_GUIDE.md](docs/LOCAL_AGENT_GUIDE.md) for setup, `.vscode/mcp.json`, VS Code Tasks, and `npm run cli -- --help`.
+## Quick Start
 
-## Included
-- `PRD.md` — product requirements, scope, personas, acceptance criteria
-- `WORKFLOW.md` — end-to-end operating workflow and failure paths
-- `PROMPT.md` — detailed Antigravity build prompt
-- `AGENTS.md` — project-level rules for coding agents
-- `docs/ARCHITECTURE.md` — recommended architecture and integrations
-- `docs/BUFFER_INTEGRATION.md` — API integration checklist and verification gates
-- `docs/CONTENT_POLICY.md` — editorial, quality, and platform-safety rules
-- `docs/SECURITY.md` — secrets, OAuth, privacy, and operational security
-- `config/settings.example.yaml` — editable operating defaults
-- `.env.example` — environment variable names only; never put real secrets here
-- `schemas/content-item.schema.json` — normalized content item schema
-- `templates/` — research, post, and weekly report templates
-- `BACKLOG.md` — implementation phases and task checklist
+1. Copy `.env.example` to `.env` and add your `BUFFER_API_KEY` (from Buffer **Settings → API**).
+2. Build the packages:
+   ```bash
+   npm run build
+   ```
+3. Verify your Buffer X channel and local status:
+   ```bash
+   npm run cli -- channels
+   npm run cli -- status
+   ```
+4. Operate from **Antigravity** (`.agents/mcp_config.json` + `.agents/skills/xgrowth-controller/SKILL.md`) or **VS Code** (`.vscode/mcp.json`, `.vscode/tasks.json`, or `npm run cli -- --help`).
 
-## Suggested first build
-Build a local-first MVP:
-1. Dashboard and content library.
-2. Research intake and AI draft generation.
-3. Human approval queue.
-4. Buffer integration using the documented GraphQL API and a server-side personal API key.
-5. Scheduling and publishing status reconciliation.
-6. Analytics import and weekly report.
+See [docs/LOCAL_AGENT_GUIDE.md](docs/LOCAL_AGENT_GUIDE.md) for the full command and MCP reference.
 
-Do not build a browser-clicking bot for X or Buffer. Use documented APIs and approved integrations only.
+## Repository Structure
 
-## Setup
-1. Create a new Antigravity workspace and place these files at the repository root.
-2. Open `PROMPT.md` and ask Antigravity to follow it.
-3. Have the agent inspect current Buffer docs before writing integration code.
-4. Copy `.env.example` to `.env` and fill secrets locally; never commit `.env`.
-5. Start in dry-run mode. Test drafts and queue operations with a private/test channel where possible.
-6. Enable live publishing only after explicit owner approval.
-
-## Key design decision
-The system should not independently publish to X. It prepares content and submits approved content to Buffer. Buffer remains the source of truth for scheduled/published queue state wherever its API exposes that state.
+- `packages/shared` — Shared Zod schemas, content enums, X 280-char validator, and tone linter
+- `packages/config` — Environment loader (`BUFFER_API_KEY`, `XGROWTH_DATA_DIR`)
+- `packages/mcp` — Local JSON/JSONL store, 4-gate Buffer GraphQL publisher, 23-tool MCP server, and `xgrowth` CLI
+- `.agents/` — Antigravity MCP configuration and `xgrowth-controller` skill
+- `.vscode/` — VS Code MCP configuration and runnable workspace tasks
+- `docs/` — Architecture, Buffer API verification, security, content policy, and local agent guide

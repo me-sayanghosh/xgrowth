@@ -5,7 +5,6 @@
       "command": "node",
       "args": ["${workspaceFolder}/packages/mcp/dist/index.js"],
       "env": {
-        "XGROWTH_MODE": "local",
         "XGROWTH_DATA_DIR": "${workspaceFolder}/data"
       }
     }

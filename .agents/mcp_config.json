@@ -2,10 +2,7 @@
   "mcpServers": {
     "xgrowth": {
       "command": "node",
-      "args": ["packages/mcp/dist/index.js"],
-      "env": {
-        "XGROWTH_MODE": "local"
-      }
+      "args": ["packages/mcp/dist/index.js"]
     }
   }
 }
