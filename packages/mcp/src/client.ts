@@ -1,11 +1,16 @@
 export interface XGrowthStatus {
+  mode?: string;
+  dataDir?: string;
   globalPause: boolean;
   operationMode: string;
+  defaultChannelId?: string;
   brandPillars: string[];
   voiceTraits: string[];
+  referenceAccountsCount?: number;
   pendingReviewCount?: number;
   approvedCount?: number;
   submittedCount?: number;
+  unknownCount?: number;
 }
 
 export interface ResearchTopic {
@@ -34,18 +39,18 @@ export interface ContentItemDetails {
   status: string;
   format: string;
   text: string;
-  topicPillar: string;
+  topicPillar?: string;
   contentHash?: string;
   approval?: {
     approvedBy: string;
     approvedAt: string;
     approvedHash: string;
-  };
+  } | null;
   buffer?: {
     channelId?: string;
     submissionId?: string;
     providerStatus?: string;
-  };
+  } | null;
   createdAt: string;
 }
 
@@ -211,7 +216,7 @@ export class XGrowthApiClient {
     });
   }
 
-  public async getCalendarSlots(days = 7): Promise<unknown[]> {
+  public async getCalendarSlots(days = 7): Promise<unknown> {
     return this.request<unknown[]>(`/api/calendar/slots?days=${days}`);
   }
 
@@ -227,7 +232,7 @@ export class XGrowthApiClient {
     return this.request<ContentItemDetails[]>(`/api/content/items${query}`);
   }
 
-  public async approveDraft(id: string, channelId: string): Promise<{ success: boolean; item: ContentItemDetails }> {
+  public async approveDraft(id: string, channelId?: string): Promise<{ success: boolean; item: ContentItemDetails }> {
     return this.request<{ success: boolean; item: ContentItemDetails }>(`/api/content/items/${id}/approve`, {
       method: 'POST',
       body: JSON.stringify({ channelId }),
@@ -236,7 +241,7 @@ export class XGrowthApiClient {
 
   public async submitToBuffer(params: {
     contentItemId: string;
-    channelId: string;
+    channelId?: string;
     schedulingType?: 'addToQueue' | 'scheduled' | 'publishNow';
     dueAt?: string;
   }): Promise<{ success: boolean; status: string; submissionId?: string; message: string }> {
@@ -263,6 +268,55 @@ export class XGrowthApiClient {
     throw new Error('No weekly analytics reports available');
   }
 
+  public async createDraft(_params: {
+    text: string;
+    threadParts?: string[];
+    format?: string;
+    topicPillar?: string;
+    audience?: string;
+    sourceUrls?: string[];
+    researchNotes?: string;
+    mediaUrls?: string[];
+  }): Promise<unknown> {
+    throw new Error('xgrowth_create_draft requires XGROWTH_MODE=local (or use xgrowth_generate_draft + xgrowth_edit_draft in http mode).');
+  }
+
+  public async saveReferenceAccount(_input: {
+    handle: string;
+    displayName?: string;
+    profileUrl?: string;
+    notes?: string;
+    styleTraits?: string[];
+    postArchetypes?: string[];
+    samplePosts?: string[];
+    topics?: string[];
+  }): Promise<unknown> {
+    throw new Error('Reference account profiles require XGROWTH_MODE=local.');
+  }
+
+  public async listReferenceAccounts(): Promise<unknown[]> {
+    throw new Error('Reference account profiles require XGROWTH_MODE=local.');
+  }
+
+  public async deleteReferenceAccount(_idOrHandle: string): Promise<{ success: boolean }> {
+    throw new Error('Reference account profiles require XGROWTH_MODE=local.');
+  }
+
+  public async addTopic(_params: {
+    title: string;
+    sourceUrl: string;
+    sourceName?: string;
+    summary?: string;
+    topicPillar?: string;
+  }): Promise<unknown> {
+    throw new Error('Adding manual research topics via MCP requires XGROWTH_MODE=local.');
+  }
+
+  public async getStyleProfile(): Promise<unknown> {
+    const status = await this.getStatus();
+    return { settings: status, referenceAccounts: [] };
+  }
+
   public async fetchResource(uri: string): Promise<unknown> {
     if (uri === 'xgrowth://status') {
       return this.getStatus();
@@ -273,6 +327,37 @@ export class XGrowthApiClient {
     if (uri === 'xgrowth://weekly-report') {
       return this.getWeeklyReport();
     }
+    if (uri === 'xgrowth://style-profile') {
+      return this.getStyleProfile();
+    }
     throw new Error(`Unsupported resource URI: ${uri}`);
   }
 }
+
+export type XGrowthClientLike = Pick<
+  XGrowthApiClient,
+  | 'getStatus'
+  | 'toggleEmergencyPause'
+  | 'getTopics'
+  | 'generateDrafts'
+  | 'listChannels'
+  | 'runDailyPipeline'
+  | 'generateHooks'
+  | 'suggestCtas'
+  | 'listDrafts'
+  | 'editDraft'
+  | 'approveDraft'
+  | 'rejectDraft'
+  | 'getCalendarSlots'
+  | 'schedulePost'
+  | 'submitToBuffer'
+  | 'reconcileStatus'
+  | 'getWeeklyReport'
+  | 'createDraft'
+  | 'saveReferenceAccount'
+  | 'listReferenceAccounts'
+  | 'deleteReferenceAccount'
+  | 'addTopic'
+  | 'getStyleProfile'
+  | 'fetchResource'
+>;

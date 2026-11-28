@@ -35,9 +35,13 @@ export class LocalPublisherService {
     if (!res.ok) {
       throw new Error(`[${res.error.code}] ${res.error.message}`);
     }
+    const quota = this.store.getQuota();
     return {
       channels: res.value,
-      quota: this.store.getQuota(),
+      quota: {
+        ...quota,
+        remaining: Math.max(0, quota.monthlyLimit - quota.usageCount),
+      },
     };
   }
 

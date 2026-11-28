@@ -6,7 +6,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "xgrowth-mcp": "./dist/index.js"
+    "xgrowth-mcp": "./dist/index.js",
+    "xgrowth": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc --build",

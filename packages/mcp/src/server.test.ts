@@ -130,6 +130,12 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
       rejectDraft: vi.fn().mockResolvedValue({ success: true, item: { id: 'item-101', status: 'rejected' } }),
       getCalendarSlots: vi.fn().mockResolvedValue([{ date: '2026-11-28', totalScheduled: 0, maxAllowed: 3 }]),
       schedulePost: vi.fn().mockResolvedValue({ success: true, item: { id: 'item-101' } }),
+      createDraft: vi.fn().mockResolvedValue({ id: 'item-301', status: 'needs_review', text: 'Agent authored draft' }),
+      saveReferenceAccount: vi.fn().mockResolvedValue({ id: 'ref-1', handle: '@ref_dev' }),
+      listReferenceAccounts: vi.fn().mockResolvedValue([{ id: 'ref-1', handle: '@ref_dev' }]),
+      deleteReferenceAccount: vi.fn().mockResolvedValue({ success: true }),
+      addTopic: vi.fn().mockResolvedValue({ id: 'topic-99', title: 'New Topic' }),
+      getStyleProfile: vi.fn().mockResolvedValue({ settings: { brandPillars: ['Software engineering'] }, referenceAccounts: [] }),
     } as unknown as XGrowthApiClient;
 
     const server = createXGrowthMcpServer(mockApiClient);
@@ -145,7 +151,7 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
     await client.close();
   });
 
-  it('registers all 17 expected XGrowth management and agent tools', async () => {
+  it('registers all 23 expected XGrowth management and local-agent tools', async () => {
     const listResult = await client.listTools();
     const toolNames = listResult.tools.map((t) => t.name);
 
@@ -166,7 +172,13 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
     expect(toolNames).toContain('xgrowth_reject_draft');
     expect(toolNames).toContain('xgrowth_get_calendar');
     expect(toolNames).toContain('xgrowth_schedule_post');
-    expect(toolNames.length).toBe(17);
+    expect(toolNames).toContain('xgrowth_create_draft');
+    expect(toolNames).toContain('xgrowth_save_reference_account');
+    expect(toolNames).toContain('xgrowth_list_reference_accounts');
+    expect(toolNames).toContain('xgrowth_delete_reference_account');
+    expect(toolNames).toContain('xgrowth_add_research_topic');
+    expect(toolNames).toContain('xgrowth_get_style_profile');
+    expect(toolNames.length).toBe(23);
   });
 
   it('executes xgrowth_get_status and returns system status payload', async () => {
@@ -282,6 +294,7 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
     expect(uris).toContain('xgrowth://status');
     expect(uris).toContain('xgrowth://review-queue');
     expect(uris).toContain('xgrowth://weekly-report');
+    expect(uris).toContain('xgrowth://style-profile');
 
     const readStatus = await client.readResource({ uri: 'xgrowth://status' });
     expect(readStatus.contents.length).toBe(1);

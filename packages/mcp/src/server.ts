@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { XGrowthApiClient } from './client.js';
+import { XGrowthApiClient, XGrowthClientLike } from './client.js';
 
-export function createXGrowthMcpServer(client?: XGrowthApiClient): McpServer {
-  const apiClient = client || new XGrowthApiClient();
+export function createXGrowthMcpServer(client?: XGrowthClientLike): McpServer {
+  const apiClient: XGrowthClientLike = client || new XGrowthApiClient();
 
   const server = new McpServer({
     name: 'xgrowth-mcp',
@@ -158,7 +158,7 @@ export function createXGrowthMcpServer(client?: XGrowthApiClient): McpServer {
     'Formally approve a draft for publishing. Computes a canonical cryptographic SHA-256 hash and records an immutable approval record.',
     {
       contentItemId: z.string().describe('The ID of the draft to approve.'),
-      channelId: z.string().describe('Target Buffer X channel ID for publication.'),
+      channelId: z.string().optional().describe('Target Buffer X channel ID (optional if defaultChannelId is configured).'),
     },
     async ({ contentItemId, channelId }) => {
       try {
@@ -186,7 +186,7 @@ export function createXGrowthMcpServer(client?: XGrowthApiClient): McpServer {
     'Submit an approved post to Buffer for scheduling/queueing. Evaluates all 4 gates (pause, approved status, canonical hash, idempotency).',
     {
       contentItemId: z.string().describe('The ID of the approved draft to publish.'),
-      channelId: z.string().describe('Target Buffer X channel ID.'),
+      channelId: z.string().optional().describe('Target Buffer X channel ID (optional if bound during approval or defaultChannelId is set).'),
       schedulingType: z.enum(['addToQueue', 'scheduled', 'publishNow']).default('addToQueue').describe('Buffer queue type.'),
       dueAt: z.string().optional().describe('ISO timestamp for scheduled queueing.'),
     },
@@ -457,6 +457,155 @@ export function createXGrowthMcpServer(client?: XGrowthApiClient): McpServer {
     },
   );
 
+  // 18. Create Draft Directly (Agent-Authored, Zero-Gemini)
+  server.tool(
+    'xgrowth_create_draft',
+    'Save a post or thread authored directly by Antigravity or VS Code Copilot into needs_review after 280-char and tone-lint validation.',
+    {
+      text: z.string().min(1).describe('Primary post text (or first tweet of a thread).'),
+      threadParts: z.array(z.string()).optional().describe('Optional ordered tweets for an X thread.'),
+      format: z
+        .enum(['single_post', 'educational_tip', 'build_in_public', 'opinion_with_reasoning', 'thread_draft'])
+        .optional()
+        .describe('Content format.'),
+      topicPillar: z.string().optional().describe('Content pillar name.'),
+      audience: z.string().optional().describe('Target developer audience.'),
+      sourceUrls: z.array(z.string().url()).optional().describe('Supporting reference URLs.'),
+      researchNotes: z.string().optional().describe('Angle, style inspiration, or factual notes.'),
+      mediaUrls: z.array(z.string().url()).optional().describe('Optional public media URLs.'),
+    },
+    async (args) => {
+      try {
+        const created = await apiClient.createDraft(args);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(created, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to create draft: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 19. Save Reference X Account Style Profile
+  server.tool(
+    'xgrowth_save_reference_account',
+    'Save or update a reference X account profile (style traits, post archetypes, sample posts, topics) for original style inspiration.',
+    {
+      handle: z.string().min(1).describe('X handle such as @handle.'),
+      displayName: z.string().optional().describe('Display name of the reference account.'),
+      profileUrl: z.string().url().optional().describe('Profile URL.'),
+      notes: z.string().optional().describe('What works well about this account style.'),
+      styleTraits: z.array(z.string()).optional().describe('Observed writing/formatting traits.'),
+      postArchetypes: z.array(z.string()).optional().describe('Post formats/structures they use well.'),
+      samplePosts: z.array(z.string()).optional().describe('Pasted example posts for structural reference (never copied verbatim).'),
+      topics: z.array(z.string()).optional().describe('Core topics they post about.'),
+    },
+    async (args) => {
+      try {
+        const saved = await apiClient.saveReferenceAccount(args);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(saved, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to save reference account: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 20. List Reference Accounts
+  server.tool(
+    'xgrowth_list_reference_accounts',
+    'List saved reference X accounts and their style patterns.',
+    {},
+    async () => {
+      try {
+        const refs = await apiClient.listReferenceAccounts();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(refs, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to list reference accounts: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 21. Delete Reference Account
+  server.tool(
+    'xgrowth_delete_reference_account',
+    'Delete a saved reference X account by ID or @handle.',
+    {
+      idOrHandle: z.string().min(1).describe('Reference ID or @handle to remove.'),
+    },
+    async ({ idOrHandle }) => {
+      try {
+        const res = await apiClient.deleteReferenceAccount(idOrHandle);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(res, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to delete reference account: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 22. Add Research Topic
+  server.tool(
+    'xgrowth_add_research_topic',
+    'Save a verified technical topic and source URL into the local research backlog.',
+    {
+      title: z.string().min(1).describe('Topic headline or angle.'),
+      sourceUrl: z.string().url().describe('Verified primary source URL.'),
+      sourceName: z.string().optional().describe('Source publication or author.'),
+      summary: z.string().optional().describe('Key verified facts or takeaway.'),
+      topicPillar: z.string().optional().describe('Matching brand pillar.'),
+    },
+    async (args) => {
+      try {
+        const topic = await apiClient.addTopic(args);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(topic, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to add topic: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
+  // 23. Get Style Profile & Reference Context
+  server.tool(
+    'xgrowth_get_style_profile',
+    'Retrieve configured brand pillars, voice traits, banned buzzwords, and saved reference account styles.',
+    {},
+    async () => {
+      try {
+        const profile = await apiClient.getStyleProfile();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(profile, null, 2) }],
+        };
+      } catch (err: unknown) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Failed to load style profile: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    },
+  );
+
   // ==========================================
   // MCP Resources
   // ==========================================
@@ -512,6 +661,25 @@ export function createXGrowthMcpServer(client?: XGrowthApiClient): McpServer {
             uri: 'xgrowth://weekly-report',
             mimeType: 'text/markdown',
             text: report.markdownReport || JSON.stringify(report, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  // Resource 4: Style Profile & Reference Accounts
+  server.resource(
+    'xgrowth_style_profile',
+    'xgrowth://style-profile',
+    { mimeType: 'application/json', description: 'Brand pillars, voice guidelines, and saved reference X account styles' },
+    async () => {
+      const profile = await apiClient.getStyleProfile();
+      return {
+        contents: [
+          {
+            uri: 'xgrowth://style-profile',
+            mimeType: 'application/json',
+            text: JSON.stringify(profile, null, 2),
           },
         ],
       };
