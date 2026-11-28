@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { getEnv } from '@xgrowth/config';
 import { createXGrowthMcpServer } from './server.js';
-import { XGrowthApiClient, XGrowthClientLike } from './client.js';
+import { XGrowthClientLike } from './client.js';
 import { LocalXGrowthClient } from './local/local-client.js';
 
 export * from './client.js';
@@ -15,10 +14,6 @@ export * from './local/buffer-client.js';
 export * from './local/local-publisher.js';
 
 export function createDefaultClient(): XGrowthClientLike {
-  const env = getEnv();
-  if (env.XGROWTH_MODE === 'http') {
-    return new XGrowthApiClient();
-  }
   return new LocalXGrowthClient();
 }
 
@@ -39,7 +34,6 @@ export async function runServer(): Promise<void> {
   await server.connect(transport);
 }
 
-// Auto-run when executed directly as CLI script
 if (process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js')) {
   runServer().catch((err) => {
     console.error('[XGrowth MCP Server Fatal Error]', err);

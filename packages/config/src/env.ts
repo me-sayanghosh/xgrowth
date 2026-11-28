@@ -16,19 +16,11 @@ export function getRepoRoot(): string {
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().default(3000),
-  APP_URL: z.string().url().default('http://localhost:5173'),
-  API_URL: z.string().url().default('http://localhost:3000'),
-  APP_SESSION_SECRET: z.string().min(16).default('development_random_secret_at_least_16_chars'),
-  MONGODB_URI: z.string().default('mongodb://127.0.0.1:27017/xgrowth_ai'),
-  GEMINI_API_KEY: z.string().optional().default(''),
-  GEMINI_MODEL: z.string().optional().default('gemini-2.5-flash'),
   BUFFER_API_KEY: z.string().optional().default(''),
+  XGROWTH_DATA_DIR: z.string().optional().default(''),
   NOTIFICATION_PROVIDER: z.string().optional().default(''),
   NOTIFICATION_API_KEY: z.string().optional().default(''),
   NOTIFICATION_TARGET: z.string().optional().default(''),
-  XGROWTH_MODE: z.enum(['local', 'http']).optional().default('local'),
-  XGROWTH_DATA_DIR: z.string().optional().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

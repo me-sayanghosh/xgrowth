@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createXGrowthMcpServer } from './server.js';
-import { XGrowthApiClient } from './client.js';
+import { XGrowthClientLike } from './client.js';
 
 describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
-  let mockApiClient: XGrowthApiClient;
+  let mockApiClient: XGrowthClientLike;
   let client: Client;
   let serverTransport: InMemoryTransport;
   let clientTransport: InMemoryTransport;
@@ -136,7 +136,8 @@ describe('XGrowth MCP Server & Antigravity Tool Suite', () => {
       deleteReferenceAccount: vi.fn().mockResolvedValue({ success: true }),
       addTopic: vi.fn().mockResolvedValue({ id: 'topic-99', title: 'New Topic' }),
       getStyleProfile: vi.fn().mockResolvedValue({ settings: { brandPillars: ['Software engineering'] }, referenceAccounts: [] }),
-    } as unknown as XGrowthApiClient;
+      fetchResource: vi.fn(),
+    } as unknown as XGrowthClientLike;
 
     const server = createXGrowthMcpServer(mockApiClient);
     [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();

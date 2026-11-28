@@ -1,9 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { XGrowthApiClient, XGrowthClientLike } from './client.js';
+import { XGrowthClientLike } from './client.js';
+import { LocalXGrowthClient } from './local/local-client.js';
 
 export function createXGrowthMcpServer(client?: XGrowthClientLike): McpServer {
-  const apiClient: XGrowthClientLike = client || new XGrowthApiClient();
+  const apiClient: XGrowthClientLike = client || new LocalXGrowthClient();
 
   const server = new McpServer({
     name: 'xgrowth-mcp',
