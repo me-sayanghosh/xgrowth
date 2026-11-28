@@ -8,7 +8,6 @@
     { "path": "./packages/shared" },
     { "path": "./packages/config" },
     { "path": "./packages/mcp" },
-    { "path": "./apps/api" },
-    { "path": "./apps/web" }
+    { "path": "./apps/api" }
   ]
 }
