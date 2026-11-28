@@ -11,3 +11,6 @@ export * from './schemas/research.js';
 export * from './schemas/audit.js';
 export * from './schemas/analytics.js';
 export * from './schemas/job.js';
+export * from './schemas/local-agent.js';
+export * from './utils/character-validator.js';
+export * from './utils/tone-linter.js';
