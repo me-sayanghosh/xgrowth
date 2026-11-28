@@ -1,125 +1,97 @@
 ---
 name: xgrowth-controller
-description: "Control and operate the XGrowth AI content automation engine: research topics, generate technically grounded drafts, review pending queue, request approval, and monitor publishing via Buffer."
+description: "Control and operate the XGrowth AI content automation engine: research topics, model style from reference accounts, draft directly without external AI keys, review pending queue, request approval, and publish via Buffer."
 ---
 
 # XGrowth AI Controller Skill
 
-This skill guides Antigravity agents in controlling the **XGrowth AI** automation engine for X (Twitter) through its native Model Context Protocol (MCP) server.
+This skill guides Antigravity and VS Code agents in operating **XGrowth AI** in **zero-DB local mode** (`data/*.json`) connected directly to **Buffer** (`https://api.buffer.com`) via `@xgrowth/mcp` or `npm run cli`.
 
 ## Overview & Architecture
 
-XGrowth AI is a **Buffer-first**, human-in-the-loop content operations platform. It manages technical personal branding without spam, fake engagement, or direct bot scraping.
+```text
+Antigravity / VS Code Agent  -->  @xgrowth/mcp (Local JSON Store + 4-Gate Safety)  -->  Buffer API  -->  X (Twitter)
+```
 
-```
-Antigravity Agent  -->  XGrowth MCP Server  -->  XGrowth Engine  -->  Buffer API  -->  X (Twitter)
-```
+No MongoDB, React frontend, or external `GEMINI_API_KEY` is required in local mode. The agent acts as the strategist and writer, persisting drafts locally in `data/drafts.json` and reference styles in `data/references.json`.
 
 ## Core Safety Invariants
 
 1. **Dual-Gate Safety & Emergency Pause**:
-   - `globalPause: true` blocks all external submissions.
-   - Use `xgrowth_toggle_emergency_pause` only when instructed by the owner.
+   - `globalPause: true` (default) blocks all outbound Buffer submissions.
+   - Only disable via `xgrowth_toggle_emergency_pause` when explicitly instructed by the owner.
 2. **Cryptographic Approval Invariant**:
-   - Every post submitted to Buffer must have `status: 'approved'` with a canonical SHA-256 hash.
-   - Modifying draft text after approval invalidates approval and resets status to `needs_review`.
+   - Every post submitted to Buffer must have `status: 'approved'` with a canonical SHA-256 hash bound to text + threadParts + channelId + mediaUrls.
+   - Modifying draft text after approval immediately revokes approval and resets status to `needs_review`.
 3. **Buffer-First Outbound Publishing**:
-   - Buffer is the sole publishing provider. Do not use direct X bots or browser scrapers.
-4. **No Blind Retries**:
-   - If a submission request times out, it is quarantined in `unknown` state.
-   - Use `xgrowth_reconcile_status` to safely verify with Buffer queue history before retrying.
+   - Buffer is the sole publishing provider. Never use direct X bots, automated likes/follows/replies, or X scrapers.
+4. **Reference Account Rules**:
+   - Use saved reference accounts (`xgrowth_save_reference_account`, `xgrowth://style-profile`) for **structural/style inspiration** (hooks, pacing, archetypes, topics).
+   - Never copy or paraphrase reference posts verbatim, and never fabricate personal experiences.
+5. **No Blind Retries**:
+   - Timeouts quarantine items in `unknown` state. Always run `xgrowth_reconcile_status` before retrying.
 
 ---
 
 ## MCP Resources
 
-Antigravity agents can directly read live contextual resources using `read_resource`:
-
 | Resource URI | Description | MIME Type |
 |---|---|---|
-| `xgrowth://status` | Live operational status, emergency pause state, and channel connectivity | `application/json` |
-| `xgrowth://review-queue` | Pending review drafts in the queue needing approval | `application/json` |
-| `xgrowth://weekly-report` | Latest weekly content synthesis and week-over-week performance | `text/markdown` |
+| `xgrowth://status` | Live operational status, pause state, and queue counts | `application/json` |
+| `xgrowth://review-queue` | Pending review drafts needing owner approval | `application/json` |
+| `xgrowth://style-profile` | Brand pillars, voice traits, avoid list, and saved reference accounts | `application/json` |
+| `xgrowth://weekly-report` | Local weekly summary report | `text/markdown` |
 
 ---
 
-## MCP Prompts
+## Operating Workflows (Zero-DB Local Mode)
 
-The server exports reusable prompt templates to guide the agent:
-
-1. **`draft_engineering_post`**:
-   - Guide for drafting authentic, non-clickbait developer posts on X adhering strictly to 280-character constraints and verified facts.
-   - Arguments: `topic`, `pillar` (optional), `format` (optional).
-2. **`analyze_performance`**:
-   - Guide for evaluating recent weekly reports, week-over-week delta metrics, and designing next-week hypotheses.
-   - Arguments: `focusPillar` (optional).
-
----
-
-## Operating Workflows
-
-### 1. Check System Health & Discover Buffer Channel
+### 1. Check Health & Discover Buffer Channel
 ```json
-// Call tools
 xgrowth_get_status()
 xgrowth_list_channels()
 ```
-Inspect:
-- `globalPause`: whether submissions are halted.
-- `pendingReviewCount`: drafts waiting for owner inspection.
-- `channels[].id`: the connected Buffer X channel ID needed for approval and submission.
 
-### 2. Autonomous Research-to-Draft Agent Pipeline (or Manual Research)
+### 2. Save & Read Reference Account Styles
+When the owner shares reference X accounts or example posts:
 ```json
-// Run end-to-end daily research -> brief -> draft pipeline:
-xgrowth_run_daily_pipeline({ "maxTopics": 2, "syncFeeds": true, "format": "educational_tip" })
-
-// Or fetch candidate topics directly:
-xgrowth_research_topics()
-```
-
-### 3. Generate Technical Drafts, Hooks & CTAs
-```json
-// Valid formats: single_post, educational_tip, build_in_public, opinion_with_reasoning, thread_draft
-xgrowth_generate_draft({
-  "topic": "Type-Level Programming in TypeScript",
-  "verifiedFacts": [
-    "Conditional types and template literals enforce compile-time state transitions.",
-    "Eliminates entire classes of runtime validation errors in domain models."
-  ],
-  "format": "thread_draft",
-  "topicPillar": "TypeScript & Node.js",
-  "language": "en",
-  "variantCount": 2
+xgrowth_save_reference_account({
+  "handle": "@example_handle",
+  "styleTraits": ["Short concrete takeaways", "Code or architecture trade-offs"],
+  "postArchetypes": ["single_post", "build_in_public"],
+  "samplePosts": ["Example post pasted by owner"],
+  "topics": ["TypeScript", "Backend architecture"]
 })
 ```
-You can also call `xgrowth_generate_hooks`, `xgrowth_suggest_ctas`, `xgrowth_edit_draft`, `xgrowth_reject_draft`, `xgrowth_get_calendar`, and `xgrowth_schedule_post`.
-Drafts are generated using Gemini, validated for Twitter's 280-character limit, linted against hype/buzzwords, and placed in `needs_review` state.
+Read `xgrowth://style-profile` or call `xgrowth_get_style_profile()` before writing drafts.
 
-### 4. Review & Approval
-Present the generated drafts to the user. When the owner confirms a draft:
+### 3. Research & Author Drafts Directly (No Gemini Key Needed)
+1. Save discovered source links/notes (optional):
+   `xgrowth_add_research_topic({ "title": "...", "sourceUrl": "https://...", "summary": "..." })`
+2. Write original posts adhering strictly to X's 280-char limit and save directly to `needs_review`:
 ```json
-// Call tool
+xgrowth_create_draft({
+  "text": "Your original developer post under 280 characters.",
+  "format": "educational_tip",
+  "topicPillar": "Software engineering",
+  "sourceUrls": ["https://..."]
+})
+```
+*(For threads, pass `format: "thread_draft"` and `threadParts: ["1/3 ...", "2/3 ...", "3/3 ..."]`.)*
+
+### 4. Review, Approve & Submit to Buffer
+Present `needs_review` drafts to the owner. Once the owner confirms:
+```json
 xgrowth_approve_draft({
   "contentItemId": "<id>",
   "channelId": "<target_buffer_channel_id>"
 })
 ```
-This stores the canonical cryptographic hash and transitions status to `approved`.
-
-### 5. Schedule / Submit to Buffer
+Then schedule or submit:
 ```json
-// Call tool
 xgrowth_submit_to_buffer({
   "contentItemId": "<id>",
   "channelId": "<target_buffer_channel_id>",
   "schedulingType": "addToQueue"
 })
 ```
-
-### 6. Weekly Performance Synthesis
-```json
-// Call tool
-xgrowth_get_weekly_report()
-```
-Returns the executive Markdown report highlighting top-performing pillars, engagement metrics, and next experiment hypotheses.

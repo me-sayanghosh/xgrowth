@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "XGrowth: Status",
+      "type": "shell",
+      "command": "npm run cli -- status",
+      "problemMatcher": []
+    },
+    {
+      "label": "XGrowth: List Buffer Channels",
+      "type": "shell",
+      "command": "npm run cli -- channels",
+      "problemMatcher": []
+    },
+    {
+      "label": "XGrowth: List Review Queue",
+      "type": "shell",
+      "command": "npm run cli -- draft list needs_review",
+      "problemMatcher": []
+    },
+    {
+      "label": "XGrowth: List Reference Accounts",
+      "type": "shell",
+      "command": "npm run cli -- ref list",
+      "problemMatcher": []
+    },
+    {
+      "label": "XGrowth: Emergency Pause ON",
+      "type": "shell",
+      "command": "npm run cli -- pause on",
+      "problemMatcher": []
+    },
+    {
+      "label": "XGrowth: Emergency Pause OFF",
+      "type": "shell",
+      "command": "npm run cli -- pause off",
+      "problemMatcher": []
+    },
+    {
+      "label": "XGrowth: Build Monorepo",
+      "type": "shell",
+      "command": "npm run build",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "XGrowth: Run Tests",
+      "type": "shell",
+      "command": "npm test",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
