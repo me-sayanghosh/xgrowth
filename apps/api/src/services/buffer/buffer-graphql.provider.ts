@@ -9,20 +9,23 @@ import {
 import { BufferProvider, BufferProviderError } from './buffer-provider.interface.js';
 import { BufferGraphQLClient } from './buffer-graphql.client.js';
 
-interface ChannelsQueryData {
+interface OrganizationsQueryData {
   account?: {
     organizations?: Array<{
-      id?: string;
-      channels?: Array<{
-        id: string;
-        name: string;
-        service: string;
-        avatar?: string;
-        isQueuePaused?: boolean;
-        timezone?: string;
-      }>;
+      id: string;
     }>;
   };
+}
+
+interface ChannelsQueryData {
+  channels?: Array<{
+    id: string;
+    name: string;
+    service: string;
+    avatar?: string;
+    isQueuePaused?: boolean;
+    timezone?: string;
+  }>;
 }
 
 interface CreatePostMutationData {
@@ -122,37 +125,57 @@ export class BufferGraphQLProvider implements BufferProvider {
   public readonly name = 'buffer_graphql';
 
   public async listChannels(): Promise<Result<BufferChannel[], BufferProviderError>> {
-    const query = `
-      query GetChannels {
+    const orgQuery = `
+      query GetOrganizations {
         account {
           organizations {
             id
-            channels {
-              id
-              name
-              service
-              avatar
-              isQueuePaused
-              timezone
-            }
           }
         }
       }
     `;
 
+    const channelsQuery = `
+      query GetChannels($input: ChannelsInput!) {
+        channels(input: $input) {
+          id
+          name
+          service
+          avatar
+          isQueuePaused
+          timezone
+        }
+      }
+    `;
+
     try {
-      const resp = await BufferGraphQLClient.execute<ChannelsQueryData>({ query });
-      if (resp.errors && resp.errors.length > 0) {
+      const orgResp = await BufferGraphQLClient.execute<OrganizationsQueryData>({ query: orgQuery });
+      if (orgResp.errors && orgResp.errors.length > 0) {
         return err({
           code: 'BUFFER_GRAPHQL_ERROR',
-          message: resp.errors.map((e) => e.message).join('; '),
+          message: orgResp.errors.map((e) => e.message).join('; '),
           retryable: false,
         });
       }
 
       const channels: BufferChannel[] = [];
-      for (const org of resp.data?.account?.organizations || []) {
-        for (const ch of org.channels || []) {
+      for (const org of orgResp.data?.account?.organizations || []) {
+        if (!org.id) continue;
+
+        const chResp = await BufferGraphQLClient.execute<ChannelsQueryData>({
+          query: channelsQuery,
+          variables: { input: { organizationId: org.id } },
+        });
+
+        if (chResp.errors && chResp.errors.length > 0) {
+          return err({
+            code: 'BUFFER_GRAPHQL_ERROR',
+            message: chResp.errors.map((e) => e.message).join('; '),
+            retryable: false,
+          });
+        }
+
+        for (const ch of chResp.data?.channels || []) {
           if (ch.service === 'x' || ch.service === 'twitter') {
             channels.push({
               id: ch.id,

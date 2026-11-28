@@ -13,22 +13,23 @@ describe('BufferGraphQLProvider Unit Tests', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists X and Twitter channels from Buffer GraphQL account query', async () => {
-    vi.spyOn(BufferGraphQLClient, 'execute').mockResolvedValueOnce({
-      data: {
-        account: {
-          organizations: [
-            {
-              id: 'org-1',
-              channels: [
-                { id: 'ch-x', name: 'Sayang X', service: 'twitter', timezone: 'Asia/Kolkata', isQueuePaused: false },
-                { id: 'ch-li', name: 'Sayang LinkedIn', service: 'linkedin', timezone: 'UTC', isQueuePaused: false },
-              ],
-            },
+  it('lists X and Twitter channels from Buffer GraphQL organizations and channels queries', async () => {
+    vi.spyOn(BufferGraphQLClient, 'execute')
+      .mockResolvedValueOnce({
+        data: {
+          account: {
+            organizations: [{ id: 'org-1' }],
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          channels: [
+            { id: 'ch-x', name: 'Sayang X', service: 'twitter', timezone: 'Asia/Kolkata', isQueuePaused: false },
+            { id: 'ch-li', name: 'Sayang LinkedIn', service: 'linkedin', timezone: 'UTC', isQueuePaused: false },
           ],
         },
-      },
-    });
+      });
 
     const res = await provider.listChannels();
     expect(res.ok).toBe(true);
@@ -180,13 +181,13 @@ describe('BufferGraphQLProvider Unit Tests', () => {
       .mockResolvedValueOnce({
         data: {
           account: {
-            organizations: [
-              {
-                id: 'org-1',
-                channels: [{ id: 'ch-x', name: 'Sayang X', service: 'twitter' }],
-              },
-            ],
+            organizations: [{ id: 'org-1' }],
           },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          channels: [{ id: 'ch-x', name: 'Sayang X', service: 'twitter' }],
         },
       })
       .mockResolvedValueOnce({
@@ -209,7 +210,7 @@ describe('BufferGraphQLProvider Unit Tests', () => {
     const shaKey = 'a'.repeat(64);
     const res = await provider.reconcileSubmission(shaKey, 'ch-x', 'Ambiguous timeout recovery test');
 
-    expect(execSpy).toHaveBeenCalledTimes(2);
+    expect(execSpy).toHaveBeenCalledTimes(3);
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.value.id).toBe('buf-recovered-777');
