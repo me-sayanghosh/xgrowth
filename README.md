@@ -4,6 +4,10 @@ A specification and build pack for an AI-assisted X (Twitter) content, publishin
 
 > This pack is a build specification, not a claim that any account has been connected or that publishing is already enabled. Buffer's current API is a GraphQL API available on Free and paid plans, subject to limits. For a single-owner setup, use a personal API key stored server-side. Verify current limits and channel capabilities before implementation.
 
+## Zero-DB Local Agent Mode (Recommended for Antigravity & VS Code)
+You can run XGrowth AI **without MongoDB, without the React frontend, and without `GEMINI_API_KEY`** by letting Antigravity or VS Code Copilot act as the AI writer over local JSON storage (`data/`) connected directly to Buffer:
+- See [docs/LOCAL_AGENT_GUIDE.md](docs/LOCAL_AGENT_GUIDE.md) for setup, `.vscode/mcp.json`, VS Code Tasks, and `npm run cli -- --help`.
+
 ## Included
 - `PRD.md` — product requirements, scope, personas, acceptance criteria
 - `WORKFLOW.md` — end-to-end operating workflow and failure paths
