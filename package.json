@@ -4,15 +4,13 @@
   "private": true,
   "description": "Buffer-first AI-assisted content operations platform for X",
   "workspaces": [
-    "packages/*",
-    "apps/*"
+    "packages/*"
   ],
   "scripts": {
     "cli": "node packages/mcp/dist/cli.js",
-    "dev": "npm run dev --workspaces",
+    "mcp": "node packages/mcp/dist/index.js",
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
-    "seed": "npm run seed --workspace=@xgrowth/api",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
